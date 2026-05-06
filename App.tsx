@@ -113,7 +113,6 @@ const PROJECTS = [
     tech: ['React', 'Firebase', 'JavaScript', 'HTML & CSS'],
     bannerColors: ['#1e3a5f', '#2563eb'] as const,
     url: 'https://caridad-bps-final-1-2z2h.vercel.app/',
-    githubUrl: 'https://github.com/iamstorage888/Caridad-BPS-Final-1.git',
     isGitHub: false,
   },
   {
@@ -122,7 +121,7 @@ const PROJECTS = [
     name: 'Trash Application',
     subtitle: 'Waste Management Mobile App',
     status: 'Under Development' as const,
-    desc: 'A mobile application for waste and trash management, designed to help users track garbage schedules, report waste issues, and promote proper waste disposal in their community.',
+    desc: 'This is an App that monitors the status and data of a Physical Smart Trash that is made using ESP 32 boards',
     tech: ['React Native', 'Expo', 'Firebase', 'JavaScript'],
     bannerColors: ['#1a2e1a', '#2d5a27'] as const,
     url: 'https://github.com/iamstorage888/Trash-Application-.git',
@@ -760,7 +759,7 @@ const CertCard = ({ cert, r }: { cert: typeof CERTS[0]; r: R }) => (
   }}>
     <View style={{ width: 42, height: 42, borderRadius: 10, backgroundColor: C.accentDim, borderWidth: 1, borderColor: C.accentBorder, alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
       <Image
-        source={{ uri: 'https://cdn-icons-png.flaticon.com/512/411/411763.png' }}
+        source={{ uri: 'https://cdn-icons-png.flaticon.com/512/1497/1497551.png' }}
         style={{ width: 26, height: 26, tintColor: C.accent }}
         resizeMode="contain"
       />
@@ -849,20 +848,6 @@ const ProjectCard = ({ project, r }: { project: typeof PROJECTS[0]; r: R }) => {
             onPress={handleOpen} activeOpacity={0.8}
           >
             <Text style={{ fontSize: r.isSmall ? 12 : 13, fontWeight: '600', color: btnColor }}>{btnLabel}</Text>
-          </TouchableOpacity>
-        )}
-        {'githubUrl' in project && (project as any).githubUrl && (
-          <TouchableOpacity
-            style={{
-              marginTop: 8, backgroundColor: C.githubDim,
-              borderWidth: 1, borderColor: C.githubBorder,
-              borderRadius: 8, paddingVertical: r.isSmall ? 8 : 10,
-              alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 6,
-            }}
-            onPress={() => Linking.openURL((project as any).githubUrl)} activeOpacity={0.8}
-          >
-            <View style={{ width: 5, height: 5, borderRadius: 2.5, backgroundColor: C.github }} />
-            <Text style={{ fontSize: r.isSmall ? 12 : 13, fontWeight: '600', color: C.github }}>View on GitHub →</Text>
           </TouchableOpacity>
         )}
       </View>
