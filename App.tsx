@@ -922,23 +922,46 @@ const HardwareTab = ({ r }: { r: R }) => {
             </View>
           </View>
 
-          <Text style={{ fontSize: r.isSmall ? 11 : 12, color: C.muted, lineHeight: r.isSmall ? 17 : 18, marginBottom: 10 }}>
-            Smart Physical Trash Bin System
-Introduction
+          {/* Introduction */}
+<View style={{ marginBottom: 10 }}>
+  <Text style={{
+    fontSize: r.isSmall ? 10 : 11, fontWeight: '700',
+    color: C.termGreen, letterSpacing: 1,
+    textTransform: 'uppercase', marginBottom: 4,
+  }}>
+    Introduction
+  </Text>
+  <Text style={{ fontSize: r.isSmall ? 11 : 12, color: C.muted, lineHeight: r.isSmall ? 17 : 18 }}>
+    An IoT-based smart physical trash bin system integrated with a custom mobile application for real-time waste monitoring and management. The project combines multiple ESP32 microcontrollers, wireless communication, computer vision, sensors, and Firebase cloud integration to automate waste segregation and remotely monitor trash storage levels through an internet-connected application.
+  </Text>
+</View>
 
-An IoT-based smart physical trash bin system integrated with a custom mobile application for real-time waste monitoring and management. The project combines multiple ESP32 microcontrollers, wireless communication, computer vision, sensors, and Firebase cloud integration to automate waste segregation and remotely monitor trash storage levels through an internet-connected application.
+{/* Description */}
+<View style={{ marginBottom: 12 }}>
+  <Text style={{
+    fontSize: r.isSmall ? 10 : 11, fontWeight: '700',
+    color: C.termGreen, letterSpacing: 1,
+    textTransform: 'uppercase', marginBottom: 4,
+  }}>
+    Description
+  </Text>
 
-Description
+  <Text style={{ fontSize: r.isSmall ? 11 : 12, color: C.muted, lineHeight: r.isSmall ? 17 : 18, marginBottom: 8 }}>
+    The system is powered by 4 ESP32 boards that communicate with each other wirelessly to perform different tasks within the smart trash bin environment.
+  </Text>
 
-The system is powered by 4 ESP32 boards that communicate with each other wirelessly to perform different tasks within the smart trash bin environment.
+  <Text style={{ fontSize: r.isSmall ? 11 : 12, color: C.muted, lineHeight: r.isSmall ? 17 : 18, marginBottom: 8 }}>
+    One ESP32 board is connected to a camera module responsible for identifying different types of waste such as paper, plastic, metal, and unknown/random trash. After detecting the trash category, the camera module wirelessly communicates with another ESP32 board that controls the servo motors connected to a 4-way trap door mechanism. This mechanism automatically directs the detected trash into its designated storage compartment.
+  </Text>
 
-One ESP32 board is connected to a camera module responsible for identifying different types of waste such as paper, plastic, metal, and unknown/random trash. After detecting the trash category, the camera module wirelessly communicates with another ESP32 board that controls the servo motors connected to a 4-way trap door mechanism. This mechanism automatically directs the detected trash into its designated storage compartment.
+  <Text style={{ fontSize: r.isSmall ? 11 : 12, color: C.muted, lineHeight: r.isSmall ? 17 : 18, marginBottom: 8 }}>
+    Inside the trash storage section, ultrasonic sensors connected to another dedicated ESP32 board continuously monitor how full each of the four storage compartments is. The collected fill-level data is then sent wirelessly to a separate ESP32 board connected to a TFT display screen, which visually shows the real-time storage status of all trash categories.
+  </Text>
 
-Inside the trash storage section, ultrasonic sensors connected to another dedicated ESP32 board continuously monitor how full each of the four storage compartments is. The collected fill-level data is then sent wirelessly to a separate ESP32 board connected to a TFT display screen, which visually shows the real-time storage status of all trash categories.
-
-The TFT display ESP32 also serves as the main communication bridge between the hardware system and the custom mobile application. Using Firebase for cloud synchronization, this board sends real-time monitoring data to the mobile app, allowing users and administrators to remotely check the status of the trash bins. This is the only ESP32 board that requires an internet connection in order to communicate with the application and enable remote monitoring functionality.
-          </Text>
-
+  <Text style={{ fontSize: r.isSmall ? 11 : 12, color: C.muted, lineHeight: r.isSmall ? 17 : 18 }}>
+    The TFT display ESP32 also serves as the main communication bridge between the hardware system and the custom mobile application. Using Firebase for cloud synchronization, this board sends real-time monitoring data to the mobile app, allowing users and administrators to remotely check the status of the trash bins. This is the only ESP32 board that requires an internet connection in order to communicate with the application and enable remote monitoring functionality.
+  </Text>
+</View>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 5 }}>
             {['React Native', 'Expo', 'Firebase', 'IoT', 'Hardware'].map((t) => (
               <View key={t} style={{
