@@ -790,11 +790,15 @@ const GitHubComingSoon = ({ r }: { r: R }) => (
 
 // ─── HARDWARE TAB ────────────────────────────────────────────────────────────
 const HardwareTab = ({ r }: { r: R }) => {
-  const videoRef = useRef<Video>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
 
-  const PORTRAIT_W = Math.min(r.width * 0.55, 220);
-  const PORTRAIT_H = PORTRAIT_W * (16 / 9);
+  // ── Preview: portrait 9:16 box, capped so it never overflows
+  // Max preview height = 60% of screen height to stay comfortable on any phone
+  const maxPreviewH = r.width * 0.9; // generous but bounded
+  const PORTRAIT_W  = Math.min(r.width * 0.58, 240);
+  const PORTRAIT_H  = Math.min(PORTRAIT_W * (16 / 9), maxPreviewH);
+  // Back-calculate width in case height was capped
+  const FINAL_W     = PORTRAIT_H * (9 / 16);
 
   return (
     <View style={{ paddingHorizontal: r.px, paddingTop: r.isSmall ? 20 : 28 }}>
@@ -823,52 +827,54 @@ const HardwareTab = ({ r }: { r: R }) => {
         overflow: 'hidden', marginBottom: 14,
       }}>
 
-        {/* Portrait video preview */}
+        {/* ── VIDEO PREVIEW (always muted, portrait, centered) ── */}
         <TouchableOpacity onPress={() => setIsFullscreen(true)} activeOpacity={0.92}>
           <View style={{
             backgroundColor: '#000',
             alignItems: 'center',
             justifyContent: 'center',
-            paddingVertical: 18,
+            paddingVertical: 20,
           }}>
+            {/* Portrait frame — explicitly sized, centered */}
             <View style={{
-              width: PORTRAIT_W,
+              width: FINAL_W,
               height: PORTRAIT_H,
-              borderRadius: 10,
+              borderRadius: 12,
               overflow: 'hidden',
               backgroundColor: '#000',
             }}>
               <Video
                 source={require('./assets/1000035985.mp4')}
-                style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
-                resizeMode={ResizeMode.CONTAIN}
-                shouldPlay={true}
-                isLooping={true}
-                isMuted={false}
-                useNativeControls={true}
+                style={{ width: '100%', height: '100%' }}
+                resizeMode={ResizeMode.COVER}
+                shouldPlay
+                isLooping
+                isMuted={true}           // ← always muted in preview
+                useNativeControls={false} // ← no controls in preview
               />
             </View>
 
+            {/* Bottom fade */}
             <LinearGradient
-              colors={['transparent', 'rgba(0,0,0,0.40)']}
-              style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 50 }}
+              colors={['transparent', 'rgba(0,0,0,0.50)']}
+              style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 60 }}
             />
 
-            {/* Muted badge */}
+            {/* Muted badge — top left */}
             <View style={{
-              position: 'absolute', top: 24, left: 16,
-              backgroundColor: 'rgba(0,0,0,0.60)',
+              position: 'absolute', top: 28, left: 16,
+              backgroundColor: 'rgba(0,0,0,0.65)',
               borderRadius: 20, paddingHorizontal: 9, paddingVertical: 4,
               flexDirection: 'row', alignItems: 'center', gap: 5,
-              borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)',
+              borderWidth: 1, borderColor: 'rgba(255,255,255,0.14)',
             }}>
               <Ionicons name="volume-mute-outline" size={11} color={C.muted} />
               <Text style={{ fontSize: 9, color: C.muted, fontWeight: '600', letterSpacing: 0.4 }}>MUTED</Text>
             </View>
 
-            {/* Hardware badge */}
+            {/* Hardware badge — top right */}
             <View style={{
-              position: 'absolute', top: 24, right: 16,
+              position: 'absolute', top: 28, right: 16,
               backgroundColor: 'rgba(0,255,136,0.12)',
               borderRadius: 20, paddingHorizontal: 9, paddingVertical: 4,
               borderWidth: 1, borderColor: C.termGreenBorder,
@@ -878,13 +884,13 @@ const HardwareTab = ({ r }: { r: R }) => {
               <Text style={{ fontSize: 9, color: C.termGreen, fontWeight: '600', letterSpacing: 0.4 }}>HARDWARE</Text>
             </View>
 
-            {/* Tap for fullscreen badge */}
+            {/* Tap for fullscreen — bottom right */}
             <View style={{
-              position: 'absolute', bottom: 22, right: 16,
-              backgroundColor: 'rgba(0,0,0,0.60)',
+              position: 'absolute', bottom: 26, right: 16,
+              backgroundColor: 'rgba(0,0,0,0.65)',
               borderRadius: 20, paddingHorizontal: 10, paddingVertical: 5,
               flexDirection: 'row', alignItems: 'center', gap: 5,
-              borderWidth: 1, borderColor: 'rgba(255,255,255,0.14)',
+              borderWidth: 1, borderColor: 'rgba(255,255,255,0.16)',
             }}>
               <Ionicons name="expand-outline" size={13} color="#fff" />
               <Text style={{ fontSize: 10, color: '#fff', fontWeight: '600' }}>Tap for fullscreen</Text>
@@ -894,7 +900,7 @@ const HardwareTab = ({ r }: { r: R }) => {
 
         {/* Info Section */}
         <View style={{ padding: r.isSmall ? 12 : 16 }}>
-          <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 6 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 10 }}>
             <View style={{ flex: 1, marginRight: 8 }}>
               <Text style={{ fontSize: r.fs.projName, fontWeight: '600', color: C.text, marginBottom: 2 }}>
                 🗑️ Smart Trash
@@ -914,42 +920,45 @@ const HardwareTab = ({ r }: { r: R }) => {
           </View>
 
           {/* Introduction */}
-          <View style={{ marginBottom: 10 }}>
-            <Text style={{
-              fontSize: r.isSmall ? 10 : 11, fontWeight: '700',
-              color: C.termGreen, letterSpacing: 1,
-              textTransform: 'uppercase', marginBottom: 4,
-            }}>
-              Introduction
-            </Text>
-            <Text style={{ fontSize: r.isSmall ? 11 : 12, color: C.muted, lineHeight: r.isSmall ? 17 : 18 }}>
-              An IoT-based smart physical trash bin system integrated with a custom mobile application for real-time waste monitoring and management. The project combines multiple ESP32 microcontrollers, wireless communication, computer vision, sensors, and Firebase cloud integration to automate waste segregation and remotely monitor trash storage levels through an internet-connected application.
-            </Text>
-          </View>
-
-          {/* Description */}
           <View style={{ marginBottom: 12 }}>
             <Text style={{
               fontSize: r.isSmall ? 10 : 11, fontWeight: '700',
               color: C.termGreen, letterSpacing: 1,
-              textTransform: 'uppercase', marginBottom: 4,
+              textTransform: 'uppercase', marginBottom: 5,
+            }}>
+              Introduction
+            </Text>
+            <Text style={{ fontSize: r.isSmall ? 11 : 12, color: C.muted, lineHeight: r.isSmall ? 18 : 20 }}>
+              An IoT-based smart physical trash bin system integrated with a custom mobile application for real-time waste monitoring and management. The project combines multiple ESP32 microcontrollers, wireless communication, computer vision, sensors, and Firebase cloud integration to automate waste segregation and remotely monitor trash storage levels through an internet-connected application.
+            </Text>
+          </View>
+
+          {/* Thin divider between sections */}
+          <View style={{ height: StyleSheet.hairlineWidth, backgroundColor: C.border, marginBottom: 12 }} />
+
+          {/* Description */}
+          <View style={{ marginBottom: 14 }}>
+            <Text style={{
+              fontSize: r.isSmall ? 10 : 11, fontWeight: '700',
+              color: C.termGreen, letterSpacing: 1,
+              textTransform: 'uppercase', marginBottom: 5,
             }}>
               Description
             </Text>
 
-            <Text style={{ fontSize: r.isSmall ? 11 : 12, color: C.muted, lineHeight: r.isSmall ? 17 : 18, marginBottom: 8 }}>
+            <Text style={{ fontSize: r.isSmall ? 11 : 12, color: C.muted, lineHeight: r.isSmall ? 18 : 20, marginBottom: 10 }}>
               The system is powered by 4 ESP32 boards that communicate with each other wirelessly to perform different tasks within the smart trash bin environment.
             </Text>
 
-            <Text style={{ fontSize: r.isSmall ? 11 : 12, color: C.muted, lineHeight: r.isSmall ? 17 : 18, marginBottom: 8 }}>
+            <Text style={{ fontSize: r.isSmall ? 11 : 12, color: C.muted, lineHeight: r.isSmall ? 18 : 20, marginBottom: 10 }}>
               One ESP32 board is connected to a camera module responsible for identifying different types of waste such as paper, plastic, metal, and unknown/random trash. After detecting the trash category, the camera module wirelessly communicates with another ESP32 board that controls the servo motors connected to a 4-way trap door mechanism. This mechanism automatically directs the detected trash into its designated storage compartment.
             </Text>
 
-            <Text style={{ fontSize: r.isSmall ? 11 : 12, color: C.muted, lineHeight: r.isSmall ? 17 : 18, marginBottom: 8 }}>
+            <Text style={{ fontSize: r.isSmall ? 11 : 12, color: C.muted, lineHeight: r.isSmall ? 18 : 20, marginBottom: 10 }}>
               Inside the trash storage section, ultrasonic sensors connected to another dedicated ESP32 board continuously monitor how full each of the four storage compartments is. The collected fill-level data is then sent wirelessly to a separate ESP32 board connected to a TFT display screen, which visually shows the real-time storage status of all trash categories.
             </Text>
 
-            <Text style={{ fontSize: r.isSmall ? 11 : 12, color: C.muted, lineHeight: r.isSmall ? 17 : 18 }}>
+            <Text style={{ fontSize: r.isSmall ? 11 : 12, color: C.muted, lineHeight: r.isSmall ? 18 : 20 }}>
               The TFT display ESP32 also serves as the main communication bridge between the hardware system and the custom mobile application. Using Firebase for cloud synchronization, this board sends real-time monitoring data to the mobile app, allowing users and administrators to remotely check the status of the trash bins. This is the only ESP32 board that requires an internet connection in order to communicate with the application and enable remote monitoring functionality.
             </Text>
           </View>
@@ -969,7 +978,13 @@ const HardwareTab = ({ r }: { r: R }) => {
         </View>
       </View>
 
-      {/* ── FULLSCREEN MODAL (FIXED) ── */}
+      {/* ── FULLSCREEN MODAL ──
+          Strategy: flex:1 black container + Video fills it with CONTAIN.
+          On Android, CONTAIN sometimes left-aligns portrait video inside a
+          landscape box. Fix: wrap in an explicitly square/portrait inner View
+          that is calculated to match the video's natural 9:16 ratio and is
+          centered inside the outer flex container. The Video then uses COVER
+          to fill that exact box — giving perfect centering on every screen. */}
       <Modal
         visible={isFullscreen}
         animationType="fade"
@@ -977,30 +992,71 @@ const HardwareTab = ({ r }: { r: R }) => {
         supportedOrientations={['portrait', 'landscape']}
         onRequestClose={() => setIsFullscreen(false)}
       >
-        <View style={{ flex: 1, backgroundColor: '#000' }}>
-          <Video
-            source={require('./assets/1000035985.mp4')}
-            style={{ flex: 1, width: '100%', height: '100%' }}
-            resizeMode={ResizeMode.CONTAIN}
-            shouldPlay={true}
-            isLooping={true}
-            isMuted={false}
-            useNativeControls={true}
-          />
-          <TouchableOpacity
-            onPress={() => setIsFullscreen(false)}
-            style={{
-              position: 'absolute', top: 50, right: 20,
-              backgroundColor: 'rgba(0,0,0,0.65)',
-              borderRadius: 22, padding: 10,
-              borderWidth: 1, borderColor: 'rgba(255,255,255,0.20)',
-            }}
-          >
-            <Ionicons name="close" size={24} color="#fff" />
-          </TouchableOpacity>
-        </View>
+        <FullscreenVideoPlayer onClose={() => setIsFullscreen(false)} />
       </Modal>
+    </View>
+  );
+};
 
+// ─── FULLSCREEN VIDEO PLAYER ─────────────────────────────────────────────────
+// Separate component so it can call useWindowDimensions reactively when the
+// device rotates — giving us the live width/height to recompute the video box.
+const FullscreenVideoPlayer = ({ onClose }: { onClose: () => void }) => {
+  const { width, height } = useWindowDimensions();
+
+  // VIDEO is portrait (9:16). We want to show it as large as possible while:
+  //   a) fitting inside the screen
+  //   b) being perfectly centered both axes
+  const videoAspect = 9 / 16; // width / height for portrait video
+  const screenAspect = width / height;
+
+  let videoW: number;
+  let videoH: number;
+
+  if (screenAspect < videoAspect) {
+    // Screen is narrower than video aspect → constrain by width
+    videoW = width;
+    videoH = width / videoAspect;
+  } else {
+    // Screen is wider than video aspect → constrain by height
+    videoH = height;
+    videoW = height * videoAspect;
+  }
+
+  return (
+    <View style={{
+      flex: 1,
+      backgroundColor: '#000',
+      justifyContent: 'center',
+      alignItems: 'center',
+    }}>
+      {/* Explicitly sized & centered portrait box */}
+      <View style={{ width: videoW, height: videoH }}>
+        <Video
+          source={require('./assets/1000035985.mp4')}
+          style={{ width: '100%', height: '100%' }}
+          resizeMode={ResizeMode.COVER}  // fills the exact 9:16 box perfectly
+          shouldPlay
+          isLooping
+          isMuted={false}               // ← unmuted only in fullscreen
+          useNativeControls={true}
+        />
+      </View>
+
+      {/* Close button */}
+      <TouchableOpacity
+        onPress={onClose}
+        style={{
+          position: 'absolute',
+          top: Platform.OS === 'ios' ? 54 : (RNStatusBar.currentHeight ?? 24) + 12,
+          right: 20,
+          backgroundColor: 'rgba(0,0,0,0.70)',
+          borderRadius: 22, padding: 10,
+          borderWidth: 1, borderColor: 'rgba(255,255,255,0.22)',
+        }}
+      >
+        <Ionicons name="close" size={24} color="#fff" />
+      </TouchableOpacity>
     </View>
   );
 };
