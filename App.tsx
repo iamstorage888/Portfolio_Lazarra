@@ -1074,7 +1074,7 @@ const ProjectsPage = ({ r, scrollRef }: { r: R; scrollRef: React.RefObject<Scrol
   const filtered = filter === 'all' ? PROJECTS : PROJECTS.filter(p => p.type === filter);
 
   const FILTER_TABS: { key: ProjectFilter; label: string; count: number }[] = [
-    { key: 'all',      label: 'All',      count: PROJECTS.length },
+    { key: 'all',      label: 'All',      count: PROJECTS.length + 1 },
     { key: 'website',  label: 'Websites', count: websiteCount    },
     { key: 'app',      label: 'Apps',     count: appCount        },
     { key: 'hardware', label: 'Hardware', count: 1               },
@@ -1163,9 +1163,10 @@ const ProjectsPage = ({ r, scrollRef }: { r: R; scrollRef: React.RefObject<Scrol
           </View>
         )}
 
-        {filter !== 'hardware' && filtered.map((p) => <ProjectCard key={p.name} project={p} r={r} />)}
-        {filter !== 'hardware' && <GitHubComingSoon r={r} />}
-        {filter === 'hardware' && <HardwareTab r={r} />}
+{filter !== 'hardware' && filtered.map((p) => <ProjectCard key={p.name} project={p} r={r} />)}
+{(filter === 'hardware' || filter === 'all') && <HardwareTab r={r} />}
+{filter !== 'hardware' && <GitHubComingSoon r={r} />}
+
       </View>
 
       <View style={{ paddingHorizontal: r.px, paddingVertical: 20, alignItems: 'center', borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: C.border }}>
