@@ -11,27 +11,11 @@ import {
   Animated,
   useWindowDimensions,
   Image,
+  Modal,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-
-// ─── NOTE ─────────────────────────────────────────────────────────────────────
-// To use the VT323 tech font, add this to your app.json / expo config:
-//
-//   "expo": {
-//     "plugins": [
-//       [
-//         "expo-font",
-//         { "fonts": ["./assets/fonts/VT323-Regular.ttf"] }
-//       ]
-//     ]
-//   }
-//
-// Then download VT323-Regular.ttf from https://fonts.google.com/specimen/VT323
-// and place it in ./assets/fonts/
-//
-// OR simply use the useFonts hook from expo-font (already handled below).
-// If fonts fail to load, the app falls back to 'monospace' gracefully.
-// ─────────────────────────────────────────────────────────────────────────────
+import { Ionicons } from '@expo/vector-icons';
+import { Video, ResizeMode } from 'expo-av';
 
 // ─── RESPONSIVE HELPERS ───────────────────────────────────────────────────────
 function useResponsive() {
@@ -64,7 +48,6 @@ function useResponsive() {
 }
 
 // ─── DATA ────────────────────────────────────────────────────────────────────
-
 const SKILLS = [
   { name: 'React Native', level: 'Frontend',       color: '#60a5fa', bg: 'rgba(96,165,250,0.12)',   icon: 'https://cdn.jsdelivr.net/gh/devicons/devicon/icons/react/react-original.svg'           },
   { name: 'JavaScript',   level: 'Scripting',       color: '#fbbf24', bg: 'rgba(251,191,36,0.12)',  icon: 'https://cdn.jsdelivr.net/gh/devicons/devicon/icons/javascript/javascript-original.svg' },
@@ -77,6 +60,12 @@ const SKILLS = [
 ];
 
 const EXPERIENCE = [
+  {
+    year: '2025',
+    role: 'Freelance Developer — Capstone & Commission Projects',
+    org: 'Self-Employed · June – August 2025',
+    desc: 'Independently sourced and worked with clients to build capstone projects on a commission basis. Handled the full client lifecycle — from finding leads and scoping requirements to delivering finished software — entirely on my own initiative over three months.',
+  },
   {
     year: '2025',
     role: 'IT Intern — Government Internship Program',
@@ -113,6 +102,7 @@ const PROJECTS = [
     tech: ['React', 'Firebase', 'JavaScript', 'HTML & CSS'],
     bannerColors: ['#1e3a5f', '#2563eb'] as const,
     url: 'https://caridad-bps-final-1-2z2h.vercel.app/',
+    githubUrl: 'https://github.com/iamstorage888/Caridad-BPS-Final-1.git',
     isGitHub: false,
   },
   {
@@ -121,7 +111,7 @@ const PROJECTS = [
     name: 'Trash Application',
     subtitle: 'Waste Management Mobile App',
     status: 'Under Development' as const,
-    desc: 'This is an App that monitors the status and data of a Physical Smart Trash that is made using ESP 32 boards',
+    desc: 'A mobile application for waste and trash management, designed to help users track garbage schedules, report waste issues, and promote proper waste disposal in their community.',
     tech: ['React Native', 'Expo', 'Firebase', 'JavaScript'],
     bannerColors: ['#1a2e1a', '#2d5a27'] as const,
     url: 'https://github.com/iamstorage888/Trash-Application-.git',
@@ -167,10 +157,9 @@ const C = {
   termAmber: '#ffb800',
 };
 
-// ─── COVER PHOTO — swap null → require('./assets/cover.jpg') when ready ───────
 const COVER_IMAGE: any = null;
 
-// ─── TYPING ANIMATION ────────────────────────────────────────────────────────
+// ─── LOOPING TYPING ANIMATION (terminal cover) ────────────────────────────────
 const TYPING_TEXT    = "Hi I'm Jhon Rey, Welcome to my Website :]";
 const TYPING_SPEED   = 70;
 const DELETING_SPEED = 35;
@@ -186,7 +175,6 @@ function useTypingAnimation() {
   useEffect(() => {
     const tick = () => {
       const phase = phaseRef.current;
-
       if (phase === 'typing') {
         if (charRef.current < TYPING_TEXT.length) {
           charRef.current += 1;
@@ -213,7 +201,6 @@ function useTypingAnimation() {
         timerRef.current = setTimeout(tick, TYPING_SPEED);
       }
     };
-
     timerRef.current = setTimeout(tick, TYPING_SPEED);
     return () => { if (timerRef.current) clearTimeout(timerRef.current); };
   }, []);
@@ -221,7 +208,35 @@ function useTypingAnimation() {
   return displayed;
 }
 
-// ─── CURSOR BLINK ─────────────────────────────────────────────────────────────
+// ─── ONE-SHOT TYPING ANIMATION (bio paragraph) ───────────────────────────────
+const BIO_TEXT =
+  'Aspiring IT graduate with a strong foundation in frontend development, focused on building clean and user-friendly interfaces. Experienced in hardware troubleshooting and maintenance, with a practical, hands-on approach to solving technical issues. Currently learning and actively working on backend development and API integrations, building full-stack capabilities through real projects. A collaborative "vibe coder" who enjoys creating with creativity, flow, and problem-solving energy.';
+
+const BIO_TYPING_SPEED = 18;
+
+function useOneShotTyping(text: string, speed = BIO_TYPING_SPEED) {
+  const [displayed, setDisplayed] = useState('');
+  const [done, setDone]           = useState(false);
+  const charRef  = useRef(0);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    const tick = () => {
+      if (charRef.current < text.length) {
+        charRef.current += 1;
+        setDisplayed(text.slice(0, charRef.current));
+        timerRef.current = setTimeout(tick, speed);
+      } else {
+        setDone(true);
+      }
+    };
+    timerRef.current = setTimeout(tick, speed);
+    return () => { if (timerRef.current) clearTimeout(timerRef.current); };
+  }, [text, speed]);
+
+  return { displayed, done };
+}
+
 function useCursorBlink(speed = 530) {
   const opacity = useRef(new Animated.Value(1)).current;
   useEffect(() => {
@@ -235,7 +250,6 @@ function useCursorBlink(speed = 530) {
   return opacity;
 }
 
-// ─── ANIMATED GRADIENT BACKGROUND ────────────────────────────────────────────
 const AnimatedGradientBg = () => {
   const anim = useRef(new Animated.Value(0)).current;
   useEffect(() => {
@@ -264,7 +278,6 @@ const AnimatedGradientBg = () => {
   );
 };
 
-// ─── PULSE DOT ───────────────────────────────────────────────────────────────
 const PulseDot = () => {
   const scale = useRef(new Animated.Value(1)).current;
   useEffect(() => {
@@ -283,7 +296,6 @@ const PulseDot = () => {
   );
 };
 
-// ─── GLITCH ANIM ─────────────────────────────────────────────────────────────
 function useGlitch() {
   const x = useRef(new Animated.Value(0)).current;
   useEffect(() => {
@@ -316,11 +328,7 @@ const TerminalCover = ({ r, height }: { r: R; height: number }) => {
 
   useEffect(() => {
     Animated.loop(
-      Animated.timing(scanAnim, {
-        toValue: 1,
-        duration: 3200,
-        useNativeDriver: true,
-      })
+      Animated.timing(scanAnim, { toValue: 1, duration: 3200, useNativeDriver: true })
     ).start();
   }, []);
 
@@ -336,55 +344,30 @@ const TerminalCover = ({ r, height }: { r: R; height: number }) => {
     <View style={{ height, width: '100%', overflow: 'hidden' }}>
       <LinearGradient
         colors={['#020a04', '#040d10', '#060c18', '#03080f']}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
+        start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
         style={StyleSheet.absoluteFill}
       />
-
       <View style={[StyleSheet.absoluteFill, { opacity: 0.07 }]}>
         {Array.from({ length: Math.ceil(height / 12) }).map((_, row) =>
           Array.from({ length: 40 }).map((__, col) => (
-            <View
-              key={`${row}-${col}`}
-              style={{
-                position: 'absolute',
-                top: row * 12 + 5,
-                left: col * 9 + 4,
-                width: 1,
-                height: 1,
-                borderRadius: 0.5,
-                backgroundColor: C.termGreen,
-              }}
-            />
+            <View key={`${row}-${col}`} style={{
+              position: 'absolute', top: row * 12 + 5, left: col * 9 + 4,
+              width: 1, height: 1, borderRadius: 0.5, backgroundColor: C.termGreen,
+            }} />
           ))
         )}
       </View>
-
       <View style={[StyleSheet.absoluteFill, { opacity: 0.06 }]}>
         {Array.from({ length: Math.ceil(height / 3) }).map((_, i) => (
-          <View
-            key={`scan${i}`}
-            style={{
-              position: 'absolute',
-              left: 0, right: 0,
-              top: i * 3,
-              height: 1,
-              backgroundColor: '#00ff88',
-            }}
-          />
+          <View key={`scan${i}`} style={{
+            position: 'absolute', left: 0, right: 0, top: i * 3, height: 1, backgroundColor: '#00ff88',
+          }} />
         ))}
       </View>
-
-      <Animated.View
-        style={{
-          position: 'absolute',
-          left: 0, right: 0,
-          height: 40,
-          transform: [{ translateY: scanTranslateY }],
-          opacity: 0.06,
-        }}
-        pointerEvents="none"
-      >
+      <Animated.View style={{
+        position: 'absolute', left: 0, right: 0, height: 40,
+        transform: [{ translateY: scanTranslateY }], opacity: 0.06,
+      }} pointerEvents="none">
         <LinearGradient
           colors={['transparent', C.termGreen, 'transparent']}
           start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }}
@@ -415,106 +398,111 @@ const TerminalCover = ({ r, height }: { r: R; height: number }) => {
         flexDirection: 'row', alignItems: 'center', gap: 6, opacity: 0.55,
       }}>
         <View style={{ width: 5, height: 5, borderRadius: 2.5, backgroundColor: C.termGreen }} />
-        <Text style={{
-          fontFamily: monoFont,
-          fontSize: r.isSmall ? 7 : 8,
-          color: C.termGreen,
-          letterSpacing: 1,
-        }}>
+        <Text style={{ fontFamily: monoFont, fontSize: r.isSmall ? 7 : 8, color: C.termGreen, letterSpacing: 1 }}>
           ONLINE
         </Text>
       </View>
 
-      <View style={{
-        flex: 1,
-        justifyContent: 'center',
-        paddingHorizontal: r.isSmall ? 16 : 22,
-        paddingBottom: 8,
-      }}>
-        <View style={{
-          flexDirection: 'row',
-          alignItems: 'center',
-          gap: 6,
-          marginBottom: r.isSmall ? 8 : 12,
-          opacity: 0.45,
-        }}>
+      <View style={{ flex: 1, justifyContent: 'center', paddingHorizontal: r.isSmall ? 16 : 22, paddingBottom: 8 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: r.isSmall ? 8 : 12, opacity: 0.45 }}>
           <View style={{ flex: 1, height: StyleSheet.hairlineWidth, backgroundColor: C.termGreen }} />
-          <Text style={{
-            fontFamily: monoFont,
-            fontSize: r.isSmall ? 7 : 8,
-            color: C.termGreen,
-            letterSpacing: 2,
-          }}>
+          <Text style={{ fontFamily: monoFont, fontSize: r.isSmall ? 7 : 8, color: C.termGreen, letterSpacing: 2 }}>
             PORTFOLIO v1.0
           </Text>
           <View style={{ flex: 1, height: StyleSheet.hairlineWidth, backgroundColor: C.termGreen }} />
         </View>
-
-        <Text style={{
-          fontFamily: monoFont,
-          fontSize: r.isSmall ? 9 : 11,
-          color: 'rgba(0,255,136,0.5)',
-          letterSpacing: 0.8,
-          marginBottom: r.isSmall ? 4 : 6,
-        }}>
+        <Text style={{ fontFamily: monoFont, fontSize: r.isSmall ? 9 : 11, color: 'rgba(0,255,136,0.5)', letterSpacing: 0.8, marginBottom: r.isSmall ? 4 : 6 }}>
           {'jhon@portfolio:~/home $ echo --welcome'}
         </Text>
-
-        <Animated.View style={{
-          flexDirection: 'row',
-          alignItems: 'center',
-          flexWrap: 'wrap',
-          transform: [{ translateX: glitchX }],
-        }}>
+        <Animated.View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', transform: [{ translateX: glitchX }] }}>
           <Text style={{
             fontFamily: monoFont,
             fontSize: r.isSmall ? 18 : r.isMedium ? 21 : 24,
-            color: activeColor,
-            fontWeight: '700',
-            letterSpacing: 0.5,
-            lineHeight: r.isSmall ? 26 : 32,
-            flexShrink: 1,
-            textShadowColor: activeColor,
-            textShadowOffset: { width: 0, height: 0 },
-            textShadowRadius: 8,
+            color: activeColor, fontWeight: '700', letterSpacing: 0.5,
+            lineHeight: r.isSmall ? 26 : 32, flexShrink: 1,
+            textShadowColor: activeColor, textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 8,
           }}>
             {displayed}
           </Text>
-
           <Animated.View style={{
-            width:  r.isSmall ? 10 : 13,
-            height: r.isSmall ? 18 : 22,
-            backgroundColor: activeColor,
-            marginLeft: 2,
-            borderRadius: 1,
+            width: r.isSmall ? 10 : 13, height: r.isSmall ? 18 : 22,
+            backgroundColor: activeColor, marginLeft: 2, borderRadius: 1,
             opacity: cursorOpacity,
-            shadowColor: activeColor,
-            shadowOffset: { width: 0, height: 0 },
-            shadowRadius: 6,
-            shadowOpacity: 0.9,
+            shadowColor: activeColor, shadowOffset: { width: 0, height: 0 }, shadowRadius: 6, shadowOpacity: 0.9,
           }} />
         </Animated.View>
-
-        <View style={{
-          flexDirection: 'row',
-          gap: 5,
-          marginTop: r.isSmall ? 10 : 14,
-          alignItems: 'center',
-          opacity: 0.4,
-        }}>
+        <View style={{ flexDirection: 'row', gap: 5, marginTop: r.isSmall ? 10 : 14, alignItems: 'center', opacity: 0.4 }}>
           {[0,1,2,3,4].map((i) => (
-            <View key={i} style={{
-              height: 2, width: 6, borderRadius: 1,
-              backgroundColor: activeColor,
-            }} />
+            <View key={i} style={{ height: 2, width: 6, borderRadius: 1, backgroundColor: activeColor }} />
           ))}
         </View>
       </View>
-
       <LinearGradient
         colors={['transparent', 'rgba(11,15,26,0.85)']}
         style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 60 }}
       />
+    </View>
+  );
+};
+
+// ─── BIO TYPING TEXT ─────────────────────────────────────────────────────────
+// Types once, cursor blinks 3× then disappears — text stays permanently.
+const BioTypingText = ({ r }: { r: R }) => {
+  const { displayed, done } = useOneShotTyping(BIO_TEXT, BIO_TYPING_SPEED);
+  const cursorOpacity = useRef(new Animated.Value(1)).current;
+  const loopRef       = useRef<Animated.CompositeAnimation | null>(null);
+
+  // While typing: blink cursor continuously
+  useEffect(() => {
+    if (done) return;
+    loopRef.current = Animated.loop(
+      Animated.sequence([
+        Animated.timing(cursorOpacity, { toValue: 0, duration: 530, useNativeDriver: true }),
+        Animated.timing(cursorOpacity, { toValue: 1, duration: 530, useNativeDriver: true }),
+      ])
+    );
+    loopRef.current.start();
+    return () => loopRef.current?.stop();
+  }, [done]);
+
+  // When done: stop loop, blink 3× then fade out permanently
+  useEffect(() => {
+    if (!done) return;
+    loopRef.current?.stop();
+    cursorOpacity.setValue(1);
+    Animated.sequence([
+      Animated.timing(cursorOpacity, { toValue: 0, duration: 380, useNativeDriver: true }),
+      Animated.timing(cursorOpacity, { toValue: 1, duration: 380, useNativeDriver: true }),
+      Animated.timing(cursorOpacity, { toValue: 0, duration: 380, useNativeDriver: true }),
+      Animated.timing(cursorOpacity, { toValue: 1, duration: 380, useNativeDriver: true }),
+      Animated.timing(cursorOpacity, { toValue: 0, duration: 380, useNativeDriver: true }),
+      Animated.timing(cursorOpacity, { toValue: 1, duration: 380, useNativeDriver: true }),
+      // final fade-out — stays at 0
+      Animated.timing(cursorOpacity, { toValue: 0, duration: 500, useNativeDriver: true }),
+    ]).start();
+  }, [done]);
+
+  return (
+    <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginBottom: r.isSmall ? 16 : 20 }}>
+      <Text style={{
+        fontSize: r.fs.heroSub,
+        color: C.muted,
+        lineHeight: r.isSmall ? 19 : 22,
+        fontWeight: '300',
+      }}>
+        {displayed}
+      </Text>
+      {/* Thin blinking cursor after the last typed character */}
+      <Animated.View style={{
+        width: 2,
+        height: r.fs.heroSub + 2,
+        backgroundColor: C.accent,
+        marginLeft: 1,
+        marginTop: r.isSmall ? 2 : 3,
+        borderRadius: 1,
+        opacity: cursorOpacity,
+        alignSelf: 'flex-start',
+      }} />
     </View>
   );
 };
@@ -528,14 +516,9 @@ const CoverHero = ({ r }: { r: R }) => {
 
   return (
     <View>
-      {/* ── COVER AREA ── */}
       {COVER_IMAGE ? (
         <View style={{ height: COVER_H, width: '100%', overflow: 'hidden' }}>
-          <Image
-            source={COVER_IMAGE}
-            style={{ width: '100%', height: '100%' }}
-            resizeMode="cover"
-          />
+          <Image source={COVER_IMAGE} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
           <LinearGradient
             colors={['transparent', 'rgba(11,15,26,0.7)']}
             style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 52 }}
@@ -544,81 +527,39 @@ const CoverHero = ({ r }: { r: R }) => {
       ) : (
         <TerminalCover r={r} height={COVER_H} />
       )}
-
-      {/* ── AVATAR ROW ── */}
       <View style={{
-        paddingHorizontal: r.px,
-        marginTop: AVATAR_OFFSET,
-        flexDirection: 'row',
-        alignItems: 'flex-end',
-        justifyContent: 'space-between',
+        paddingHorizontal: r.px, marginTop: AVATAR_OFFSET,
+        flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between',
       }}>
-        {/* ── PROFILE PICTURE (prof.png) ── */}
         <View style={{
-          width: AVATAR_SIZE, height: AVATAR_SIZE,
-          borderRadius: AVATAR_SIZE / 2,
-          borderWidth: AVATAR_BORDER,
-          borderColor: C.grad1,
-          overflow: 'hidden',
-          backgroundColor: C.accentDim,
+          width: AVATAR_SIZE, height: AVATAR_SIZE, borderRadius: AVATAR_SIZE / 2,
+          borderWidth: AVATAR_BORDER, borderColor: C.grad1, overflow: 'hidden', backgroundColor: C.accentDim,
         }}>
-          <Image
-            source={require('./assets/prof.png')}
-            style={{ width: '100%', height: '100%' }}
-            resizeMode="cover"
-          />
+          <Image source={require('./assets/prof.png')} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
         </View>
-
-        {/* Open to Work badge */}
         <View style={{
           flexDirection: 'row', alignItems: 'center', gap: 5,
-          backgroundColor: C.accentDim,
-          borderWidth: 1, borderColor: C.accentBorder,
-          paddingHorizontal: 10, paddingVertical: 5,
-          borderRadius: 20, marginBottom: 4,
+          backgroundColor: C.accentDim, borderWidth: 1, borderColor: C.accentBorder,
+          paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20, marginBottom: 4,
         }}>
           <PulseDot />
-          <Text style={{
-            fontSize: r.isSmall ? 9 : 11,
-            fontWeight: '500', color: C.accent, letterSpacing: 0.4,
-          }}>
+          <Text style={{ fontSize: r.isSmall ? 9 : 11, fontWeight: '500', color: C.accent, letterSpacing: 0.4 }}>
             Open to Work
           </Text>
         </View>
       </View>
 
-      {/* ── NAME / ROLE / BIO ── */}
       <View style={{ paddingHorizontal: r.px, paddingTop: 12, paddingBottom: r.isSmall ? 20 : 24 }}>
-        <Text style={{
-          fontFamily: 'serif',
-          fontSize: r.fs.heroName,
-          fontWeight: '600',
-          color: C.text,
-          letterSpacing: -0.4,
-          marginBottom: 3,
-        }}>
+        <Text style={{ fontFamily: 'serif', fontSize: r.fs.heroName, fontWeight: '600', color: C.text, letterSpacing: -0.4, marginBottom: 3 }}>
           Jhon Rey Y. Lazarra
         </Text>
-        <Text style={{
-          fontSize: r.fs.heroRole,
-          fontWeight: '500',
-          color: C.accent,
-          marginBottom: 10,
-          letterSpacing: 0.2,
-        }}>
+        <Text style={{ fontSize: r.fs.heroRole, fontWeight: '500', color: C.accent, marginBottom: 10, letterSpacing: 0.2 }}>
           Frontend &amp; UI Developer
         </Text>
-        <Text style={{
-          fontSize: r.fs.heroSub,
-          color: C.muted,
-          lineHeight: r.isSmall ? 19 : 22,
-          fontWeight: '300',
-          marginBottom: r.isSmall ? 16 : 20,
-        }}>
-          Aspiring IT graduate with a strong foundation in frontend development, focused on building user-friendly interfaces. Expanding into backend and API integrations, eager to grow within a collaborative IT team.
-        </Text>
 
-        {/* Stats */}
+        {/* ── ONE-SHOT BIO TYPING ANIMATION ── */}
+        <BioTypingText r={r} />
+
         <View style={{ flexDirection: 'row', gap: r.isSmall ? 6 : 8, marginBottom: r.isSmall ? 16 : 18 }}>
           {[
             { num: '2025', label: 'Graduate' },
@@ -631,37 +572,18 @@ const CoverHero = ({ r }: { r: R }) => {
               borderWidth: StyleSheet.hairlineWidth, borderColor: C.border,
               paddingVertical: r.isSmall ? 8 : 10, alignItems: 'center',
             }}>
-              <Text style={{
-                fontFamily: 'serif',
-                fontSize: r.fs.statNum,
-                fontWeight: '600',
-                color: C.accent,
-              }}>
-                {s.num}
-              </Text>
-              <Text style={{
-                fontSize: r.fs.statLabel,
-                color: C.muted,
-                textTransform: 'uppercase',
-                letterSpacing: 0.3,
-                marginTop: 2,
-              }}>
-                {s.label}
-              </Text>
+              <Text style={{ fontFamily: 'serif', fontSize: r.fs.statNum, fontWeight: '600', color: C.accent }}>{s.num}</Text>
+              <Text style={{ fontSize: r.fs.statLabel, color: C.muted, textTransform: 'uppercase', letterSpacing: 0.3, marginTop: 2 }}>{s.label}</Text>
             </View>
           ))}
         </View>
-
-        {/* Tech tags */}
         <View style={{ flexDirection: 'row', gap: 6, flexWrap: 'wrap' }}>
           {['React Native', 'Expo', 'Firebase', 'JavaScript'].map((t) => (
             <View key={t} style={{
               paddingHorizontal: 8, paddingVertical: 4, borderRadius: 20,
               backgroundColor: C.accentDim, borderWidth: 1, borderColor: C.accentBorder,
             }}>
-              <Text style={{
-                fontSize: r.fs.tag, fontWeight: '600', letterSpacing: 0.5, color: C.accent,
-              }}>
+              <Text style={{ fontSize: r.fs.tag, fontWeight: '600', letterSpacing: 0.5, color: C.accent }}>
                 {t.toUpperCase()}
               </Text>
             </View>
@@ -673,7 +595,6 @@ const CoverHero = ({ r }: { r: R }) => {
 };
 
 // ─── SMALL COMPONENTS ────────────────────────────────────────────────────────
-
 const Divider = () => (
   <View style={{ height: StyleSheet.hairlineWidth, backgroundColor: C.border }} />
 );
@@ -702,20 +623,13 @@ const SkillCard = ({ skill, r }: { skill: typeof SKILLS[0]; r: R }) => (
   <View style={{
     width: r.cardW, backgroundColor: C.surface, borderRadius: 12,
     borderWidth: StyleSheet.hairlineWidth, borderColor: C.border,
-    padding: r.isSmall ? 10 : 14,
-    alignItems: 'center',
+    padding: r.isSmall ? 10 : 14, alignItems: 'center',
   }}>
     <View style={{
-      width: r.isSmall ? 44 : 52, height: r.isSmall ? 44 : 52,
-      borderRadius: 12, backgroundColor: skill.bg,
-      alignItems: 'center', justifyContent: 'center',
-      marginBottom: 10,
+      width: r.isSmall ? 44 : 52, height: r.isSmall ? 44 : 52, borderRadius: 12,
+      backgroundColor: skill.bg, alignItems: 'center', justifyContent: 'center', marginBottom: 10,
     }}>
-      <Image
-        source={{ uri: skill.icon }}
-        style={{ width: r.isSmall ? 30 : 36, height: r.isSmall ? 30 : 36 }}
-        resizeMode="contain"
-      />
+      <Image source={{ uri: skill.icon }} style={{ width: r.isSmall ? 30 : 36, height: r.isSmall ? 30 : 36 }} resizeMode="contain" />
     </View>
     <Text style={{ fontSize: r.fs.skillName, fontWeight: '600', color: C.text, marginBottom: 3, textAlign: 'center' }}>{skill.name}</Text>
     <Text style={{ fontSize: r.fs.skillLevel, color: C.hint, textTransform: 'uppercase', letterSpacing: 0.4, textAlign: 'center' }}>{skill.level}</Text>
@@ -744,9 +658,7 @@ const EduCard = ({ item, r }: { item: typeof EDUCATION[0]; r: R }) => (
     <Text style={{ fontSize: 10, color: C.hint, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 5, fontWeight: '500' }}>{item.years}</Text>
     <Text style={{ fontSize: r.isSmall ? 12 : 14, fontWeight: '500', color: C.text, marginBottom: 4 }}>{item.degree}</Text>
     <Text style={{ fontSize: r.isSmall ? 11 : 12, color: C.muted, lineHeight: 17 }}>{item.school}</Text>
-    {item.highlight && (
-      <View style={{ marginTop: 10 }}><Tag label="Graduate 2025" r={r} /></View>
-    )}
+    {item.highlight && (<View style={{ marginTop: 10 }}><Tag label="Graduate 2025" r={r} /></View>)}
   </View>
 );
 
@@ -757,12 +669,12 @@ const CertCard = ({ cert, r }: { cert: typeof CERTS[0]; r: R }) => (
     borderWidth: StyleSheet.hairlineWidth, borderColor: C.border,
     padding: r.isSmall ? 12 : 14, marginBottom: 10,
   }}>
-    <View style={{ width: 42, height: 42, borderRadius: 10, backgroundColor: C.accentDim, borderWidth: 1, borderColor: C.accentBorder, alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-      <Image
-        source={{ uri: 'https://cdn-icons-png.flaticon.com/512/1497/1497551.png' }}
-        style={{ width: 26, height: 26, tintColor: C.accent }}
-        resizeMode="contain"
-      />
+    <View style={{
+      width: 42, height: 42, borderRadius: 10,
+      backgroundColor: C.accentDim, borderWidth: 1, borderColor: C.accentBorder,
+      alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+    }}>
+      <Ionicons name="ribbon-outline" size={22} color={C.accent} />
     </View>
     <View style={{ flex: 1 }}>
       <Text style={{ fontSize: r.fs.body, fontWeight: '500', color: C.text, marginBottom: 3, lineHeight: 17 }}>{cert.name}</Text>
@@ -840,14 +752,25 @@ const ProjectCard = ({ project, r }: { project: typeof PROJECTS[0]; r: R }) => {
         {project.url && (
           <TouchableOpacity
             style={{
-              marginTop: 12, backgroundColor: btnBg,
-              borderWidth: 1, borderColor: btnBorder,
-              borderRadius: 8, paddingVertical: r.isSmall ? 8 : 10,
-              alignItems: 'center',
+              marginTop: 12, backgroundColor: btnBg, borderWidth: 1, borderColor: btnBorder,
+              borderRadius: 8, paddingVertical: r.isSmall ? 8 : 10, alignItems: 'center',
             }}
             onPress={handleOpen} activeOpacity={0.8}
           >
             <Text style={{ fontSize: r.isSmall ? 12 : 13, fontWeight: '600', color: btnColor }}>{btnLabel}</Text>
+          </TouchableOpacity>
+        )}
+        {'githubUrl' in project && (project as any).githubUrl && (
+          <TouchableOpacity
+            style={{
+              marginTop: 8, backgroundColor: C.githubDim, borderWidth: 1, borderColor: C.githubBorder,
+              borderRadius: 8, paddingVertical: r.isSmall ? 8 : 10,
+              alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 6,
+            }}
+            onPress={() => Linking.openURL((project as any).githubUrl)} activeOpacity={0.8}
+          >
+            <View style={{ width: 5, height: 5, borderRadius: 2.5, backgroundColor: C.github }} />
+            <Text style={{ fontSize: r.isSmall ? 12 : 13, fontWeight: '600', color: C.github }}>View on GitHub →</Text>
           </TouchableOpacity>
         )}
       </View>
@@ -858,11 +781,8 @@ const ProjectCard = ({ project, r }: { project: typeof PROJECTS[0]; r: R }) => {
 const GitHubComingSoon = ({ r }: { r: R }) => (
   <View style={{
     backgroundColor: C.surface, borderRadius: 16,
-    borderWidth: 1, borderColor: 'rgba(255,255,255,0.07)',
-    borderStyle: 'dashed',
-    padding: r.isSmall ? 20 : 28,
-    alignItems: 'center', justifyContent: 'center',
-    marginBottom: 14,
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.07)', borderStyle: 'dashed',
+    padding: r.isSmall ? 20 : 28, alignItems: 'center', justifyContent: 'center', marginBottom: 14,
   }}>
     <Text style={{ fontSize: r.isSmall ? 30 : 36, marginBottom: 12 }}>🐙</Text>
     <Text style={{ fontSize: r.isSmall ? 13 : 15, fontWeight: '600', color: C.muted, marginBottom: 6, textAlign: 'center' }}>
@@ -874,23 +794,209 @@ const GitHubComingSoon = ({ r }: { r: R }) => (
   </View>
 );
 
-// ─── PROJECTS PAGE COMPONENT ─────────────────────────────────────────────────
-type ProjectFilter = 'all' | 'website' | 'app';
+// ─── HARDWARE TAB ────────────────────────────────────────────────────────────
+const HardwareTab = ({ r }: { r: R }) => {
+  const videoRef = useRef<Video>(null);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  // Portrait video: fixed width ~55% of screen, height derived from 9:16 ratio
+  const PORTRAIT_W = Math.min(r.width * 0.55, 220);
+  const PORTRAIT_H = PORTRAIT_W * (16 / 9);
+
+  return (
+    <View style={{ paddingHorizontal: r.px, paddingTop: r.isSmall ? 20 : 28 }}>
+
+      {/* Header Card */}
+      <View style={{
+        backgroundColor: C.surface, borderRadius: 16,
+        borderWidth: StyleSheet.hairlineWidth, borderColor: C.border,
+        padding: r.isSmall ? 14 : 20, marginBottom: 16,
+      }}>
+        <Text style={{ fontSize: 10, color: C.termGreen, fontWeight: '600', letterSpacing: 1, marginBottom: 5 }}>
+          HARDWARE
+        </Text>
+        <Text style={{ fontFamily: 'serif', fontSize: r.isSmall ? 19 : 22, fontWeight: '600', color: C.text, marginBottom: 8 }}>
+          Physical Projects
+        </Text>
+        <Text style={{ fontSize: r.isSmall ? 12 : 13, color: C.muted, lineHeight: 19 }}>
+          Real-world hardware builds paired with custom software I built from scratch.
+        </Text>
+      </View>
+
+      {/* Smart Trash Card */}
+      <View style={{
+        backgroundColor: C.surface, borderRadius: 16,
+        borderWidth: StyleSheet.hairlineWidth, borderColor: C.border,
+        overflow: 'hidden', marginBottom: 14,
+      }}>
+
+        {/* ── PORTRAIT VIDEO: centered, not stretched ── */}
+        <TouchableOpacity onPress={() => setIsFullscreen(true)} activeOpacity={0.92}>
+          <View style={{
+            backgroundColor: '#000',
+            alignItems: 'center',
+            justifyContent: 'center',
+            paddingVertical: 18,
+          }}>
+            {/* Portrait frame — fixed 9:16 size, centered */}
+            <View style={{
+              width: PORTRAIT_W,
+              height: PORTRAIT_H,
+              borderRadius: 10,
+              overflow: 'hidden',
+              backgroundColor: '#000',
+            }}>
+<Video
+  source={require('./assets/1000035985.mp4')}
+  style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
+  resizeMode={ResizeMode.CONTAIN}
+  shouldPlay={true}
+  isLooping={true}
+  isMuted={false}
+  useNativeControls={true}
+/>
+            </View>
+
+            {/* Subtle bottom gradient over the whole touch area */}
+            <LinearGradient
+              colors={['transparent', 'rgba(0,0,0,0.40)']}
+              style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 50 }}
+            />
+
+            {/* Muted badge — top left */}
+            <View style={{
+              position: 'absolute', top: 24, left: 16,
+              backgroundColor: 'rgba(0,0,0,0.60)',
+              borderRadius: 20, paddingHorizontal: 9, paddingVertical: 4,
+              flexDirection: 'row', alignItems: 'center', gap: 5,
+              borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)',
+            }}>
+              <Ionicons name="volume-mute-outline" size={11} color={C.muted} />
+              <Text style={{ fontSize: 9, color: C.muted, fontWeight: '600', letterSpacing: 0.4 }}>MUTED</Text>
+            </View>
+
+            {/* Hardware badge — top right */}
+            <View style={{
+              position: 'absolute', top: 24, right: 16,
+              backgroundColor: 'rgba(0,255,136,0.12)',
+              borderRadius: 20, paddingHorizontal: 9, paddingVertical: 4,
+              borderWidth: 1, borderColor: C.termGreenBorder,
+              flexDirection: 'row', alignItems: 'center', gap: 5,
+            }}>
+              <View style={{ width: 5, height: 5, borderRadius: 2.5, backgroundColor: C.termGreen }} />
+              <Text style={{ fontSize: 9, color: C.termGreen, fontWeight: '600', letterSpacing: 0.4 }}>HARDWARE</Text>
+            </View>
+
+            {/* Tap for fullscreen — bottom right */}
+            <View style={{
+              position: 'absolute', bottom: 22, right: 16,
+              backgroundColor: 'rgba(0,0,0,0.60)',
+              borderRadius: 20, paddingHorizontal: 10, paddingVertical: 5,
+              flexDirection: 'row', alignItems: 'center', gap: 5,
+              borderWidth: 1, borderColor: 'rgba(255,255,255,0.14)',
+            }}>
+              <Ionicons name="expand-outline" size={13} color="#fff" />
+              <Text style={{ fontSize: 10, color: '#fff', fontWeight: '600' }}>Tap for fullscreen</Text>
+            </View>
+          </View>
+        </TouchableOpacity>
+
+        {/* Info Section */}
+        <View style={{ padding: r.isSmall ? 12 : 16 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 6 }}>
+            <View style={{ flex: 1, marginRight: 8 }}>
+              <Text style={{ fontSize: r.fs.projName, fontWeight: '600', color: C.text, marginBottom: 2 }}>
+                🗑️ Smart Trash
+              </Text>
+              <Text style={{ fontSize: r.isSmall ? 10 : 11, color: C.hint }}>
+                IoT Hardware + Mobile App
+              </Text>
+            </View>
+            <View style={{
+              backgroundColor: 'rgba(52,211,153,0.12)', borderWidth: 1,
+              borderColor: 'rgba(52,211,153,0.30)', paddingHorizontal: 7, paddingVertical: 3, borderRadius: 20,
+            }}>
+              <Text style={{ fontSize: r.isSmall ? 7 : 9, fontWeight: '600', letterSpacing: 0.4, color: '#34d399' }}>
+                COMPLETED
+              </Text>
+            </View>
+          </View>
+
+          <Text style={{ fontSize: r.isSmall ? 11 : 12, color: C.muted, lineHeight: r.isSmall ? 17 : 18, marginBottom: 10 }}>
+            A physical trash bin monitored by a custom mobile app that I built. The hardware tracks the bin's fill level and status in real time, sending data to the app so users and admins can monitor waste remotely without having to check manually.
+          </Text>
+
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 5 }}>
+            {['React Native', 'Expo', 'Firebase', 'IoT', 'Hardware'].map((t) => (
+              <View key={t} style={{
+                backgroundColor: 'rgba(255,255,255,0.06)', borderWidth: 1, borderColor: C.border,
+                borderRadius: 20, paddingHorizontal: 7, paddingVertical: 3,
+              }}>
+                <Text style={{ fontSize: r.isSmall ? 8 : 9, fontWeight: '600', color: C.hint, letterSpacing: 0.3 }}>
+                  {t.toUpperCase()}
+                </Text>
+              </View>
+            ))}
+          </View>
+        </View>
+      </View>
+
+      {/* Fullscreen Modal */}
+<Modal
+  visible={isFullscreen}
+  animationType="fade"
+  statusBarTranslucent
+  supportedOrientations={['portrait', 'landscape']}
+  onRequestClose={() => setIsFullscreen(false)}
+>
+  <View style={{ flex: 1, backgroundColor: '#000', justifyContent: 'center', alignItems: 'center' }}>
+    {/* Force portrait 9:16 box, centered on screen */}
+    <View style={{
+      width: r.width * 0.56,
+      height: r.width * 0.56 * (16 / 9),
+      maxHeight: '92%',
+    }}>
+      <Video
+        source={require('./assets/1000035985.mp4')}
+        style={{ width: '100%', height: '100%' }}
+        resizeMode={ResizeMode.COVER}
+        shouldPlay={true}
+        isLooping={true}
+        isMuted={false}
+        useNativeControls={true}
+      />
+    </View>
+    <TouchableOpacity
+      onPress={() => setIsFullscreen(false)}
+      style={{
+        position: 'absolute', top: 50, right: 20,
+        backgroundColor: 'rgba(0,0,0,0.65)',
+        borderRadius: 22, padding: 10,
+        borderWidth: 1, borderColor: 'rgba(255,255,255,0.20)',
+      }}
+    >
+      <Ionicons name="close" size={24} color="#fff" />
+    </TouchableOpacity>
+  </View>
+</Modal>
+    </View>
+  );
+};
+
+// ─── PROJECTS PAGE ────────────────────────────────────────────────────────────
+type ProjectFilter = 'all' | 'website' | 'app' | 'hardware';
 
 const ProjectsPage = ({ r, scrollRef }: { r: R; scrollRef: React.RefObject<ScrollView> }) => {
   const [filter, setFilter] = useState<ProjectFilter>('all');
-
   const websiteCount = PROJECTS.filter(p => p.type === 'website').length;
   const appCount     = PROJECTS.filter(p => p.type === 'app').length;
-
-  const filtered = filter === 'all'
-    ? PROJECTS
-    : PROJECTS.filter(p => p.type === filter);
+  const filtered = filter === 'all' ? PROJECTS : PROJECTS.filter(p => p.type === filter);
 
   const FILTER_TABS: { key: ProjectFilter; label: string; count: number }[] = [
-    { key: 'all',     label: 'All',      count: PROJECTS.length },
-    { key: 'website', label: 'Websites', count: websiteCount    },
-    { key: 'app',     label: 'Apps',     count: appCount        },
+    { key: 'all',      label: 'All',      count: PROJECTS.length },
+    { key: 'website',  label: 'Websites', count: websiteCount    },
+    { key: 'app',      label: 'Apps',     count: appCount        },
+    { key: 'hardware', label: 'Hardware', count: 1               },
   ];
 
   return (
@@ -901,7 +1007,6 @@ const ProjectsPage = ({ r, scrollRef }: { r: R; scrollRef: React.RefObject<Scrol
       contentContainerStyle={{ paddingBottom: Platform.OS === 'android' ? 20 : 0 }}
     >
       <View style={{ paddingHorizontal: r.px, paddingTop: r.isSmall ? 20 : 28 }}>
-
         <View style={{
           backgroundColor: C.surface, borderRadius: 16,
           borderWidth: StyleSheet.hairlineWidth, borderColor: C.border,
@@ -912,7 +1017,7 @@ const ProjectsPage = ({ r, scrollRef }: { r: R; scrollRef: React.RefObject<Scrol
             Projects Showcase
           </Text>
           <Text style={{ fontSize: r.isSmall ? 12 : 13, color: C.muted, lineHeight: 19, marginBottom: 12 }}>
-            Live deployments and open-source work on GitHub.
+            Live deployments, open-source work on GitHub, and hardware builds.
           </Text>
           <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
             <View style={{ backgroundColor: 'rgba(52,211,153,0.12)', borderWidth: 1, borderColor: 'rgba(52,211,153,0.30)', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 }}>
@@ -921,48 +1026,45 @@ const ProjectsPage = ({ r, scrollRef }: { r: R; scrollRef: React.RefObject<Scrol
             <View style={{ backgroundColor: C.githubDim, borderWidth: 1, borderColor: C.githubBorder, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 }}>
               <Text style={{ fontSize: 10, color: C.github, fontWeight: '600' }}>📱 {appCount} Apps</Text>
             </View>
+            <View style={{ backgroundColor: C.termGreenDim, borderWidth: 1, borderColor: C.termGreenBorder, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 }}>
+              <Text style={{ fontSize: 10, color: C.termGreen, fontWeight: '600' }}>🔧 1 Hardware</Text>
+            </View>
           </View>
         </View>
 
+        {/* Filter Tabs */}
         <View style={{
-          flexDirection: 'row',
-          backgroundColor: 'rgba(0,0,0,0.25)',
-          borderRadius: 12,
-          borderWidth: StyleSheet.hairlineWidth,
-          borderColor: C.border,
-          padding: 4,
-          marginBottom: 20,
-          gap: 4,
+          flexDirection: 'row', backgroundColor: 'rgba(0,0,0,0.25)',
+          borderRadius: 12, borderWidth: StyleSheet.hairlineWidth, borderColor: C.border,
+          padding: 4, marginBottom: 20, gap: 4,
         }}>
           {FILTER_TABS.map((tab) => {
             const isActive = filter === tab.key;
+            const isHardware = tab.key === 'hardware';
             return (
               <TouchableOpacity
                 key={tab.key}
                 onPress={() => setFilter(tab.key)}
                 activeOpacity={0.75}
                 style={{
-                  flex: 1,
-                  paddingVertical: r.isSmall ? 8 : 10,
-                  borderRadius: 9,
+                  flex: 1, paddingVertical: r.isSmall ? 8 : 10, borderRadius: 9,
                   alignItems: 'center',
-                  backgroundColor: isActive ? C.accent : 'transparent',
+                  backgroundColor: isActive
+                    ? (isHardware ? C.termGreen : C.accent)
+                    : 'transparent',
                 }}
               >
                 <Text style={{
-                  fontSize: r.isSmall ? 11 : 12,
-                  fontWeight: '600',
-                  color: isActive ? C.accentDark : C.hint,
+                  fontSize: r.isSmall ? 10 : 12, fontWeight: '600',
+                  color: isActive ? (isHardware ? '#001a0d' : C.accentDark) : C.hint,
                   letterSpacing: 0.3,
                 }}>
                   {tab.label}
                 </Text>
                 <Text style={{
-                  fontSize: r.isSmall ? 9 : 10,
-                  fontWeight: '500',
-                  color: isActive ? C.accentDark : C.hint,
-                  opacity: isActive ? 0.7 : 0.5,
-                  marginTop: 1,
+                  fontSize: r.isSmall ? 8 : 10, fontWeight: '500',
+                  color: isActive ? (isHardware ? '#001a0d' : C.accentDark) : C.hint,
+                  opacity: isActive ? 0.7 : 0.5, marginTop: 1,
                 }}>
                   {tab.count} {tab.count === 1 ? 'project' : 'projects'}
                 </Text>
@@ -971,7 +1073,7 @@ const ProjectsPage = ({ r, scrollRef }: { r: R; scrollRef: React.RefObject<Scrol
           })}
         </View>
 
-        {filter !== 'all' && (
+        {filter !== 'all' && filter !== 'hardware' && (
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 14 }}>
             <Text style={{ fontSize: r.isSmall ? 11 : 12, color: C.hint, fontWeight: '500', letterSpacing: 0.4, textTransform: 'uppercase' }}>
               {filter === 'website' ? '🌐 Website Projects' : '📱 App Projects'}
@@ -980,8 +1082,9 @@ const ProjectsPage = ({ r, scrollRef }: { r: R; scrollRef: React.RefObject<Scrol
           </View>
         )}
 
-        {filtered.map((p) => <ProjectCard key={p.name} project={p} r={r} />)}
-        <GitHubComingSoon r={r} />
+        {filter !== 'hardware' && filtered.map((p) => <ProjectCard key={p.name} project={p} r={r} />)}
+        {filter !== 'hardware' && <GitHubComingSoon r={r} />}
+        {filter === 'hardware' && <HardwareTab r={r} />}
       </View>
 
       <View style={{ paddingHorizontal: r.px, paddingVertical: 20, alignItems: 'center', borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: C.border }}>
@@ -993,9 +1096,48 @@ const ProjectsPage = ({ r, scrollRef }: { r: R; scrollRef: React.RefObject<Scrol
   );
 };
 
-// ─── MAIN APP ────────────────────────────────────────────────────────────────
+// ─── CONTACT SECTION ─────────────────────────────────────────────────────────
+type ContactRowProps = {
+  iconName: React.ComponentProps<typeof Ionicons>['name'];
+  iconColor: string;
+  iconBg: string;
+  iconBorder: string;
+  title: string;
+  subtitle: string;
+  onPress: () => void;
+  r: R;
+};
 
-type Tab = 'home' | 'projects';
+const ContactRow = ({ iconName, iconColor, iconBg, iconBorder, title, subtitle, onPress, r }: ContactRowProps) => (
+  <TouchableOpacity
+    onPress={onPress}
+    activeOpacity={0.8}
+    style={{
+      flexDirection: 'row', alignItems: 'center', gap: 14,
+      backgroundColor: C.surface,
+      borderWidth: StyleSheet.hairlineWidth, borderColor: C.border,
+      borderRadius: 14,
+      paddingVertical: r.isSmall ? 12 : 14, paddingHorizontal: r.isSmall ? 14 : 16,
+      marginBottom: 10,
+    }}
+  >
+    <View style={{
+      width: 40, height: 40, borderRadius: 20,
+      backgroundColor: iconBg, borderWidth: 1, borderColor: iconBorder,
+      alignItems: 'center', justifyContent: 'center',
+    }}>
+      <Ionicons name={iconName} size={20} color={iconColor} />
+    </View>
+    <View style={{ flex: 1 }}>
+      <Text style={{ fontSize: r.isSmall ? 13 : 14, fontWeight: '600', color: C.text }}>{title}</Text>
+      <Text style={{ fontSize: r.isSmall ? 11 : 12, color: C.hint, marginTop: 1 }}>{subtitle}</Text>
+    </View>
+    <Text style={{ fontSize: 12, color: C.hint }}>→</Text>
+  </TouchableOpacity>
+);
+
+// ─── MAIN APP ────────────────────────────────────────────────────────────────
+type Tab = 'home' | 'projects' | 'contact';
 
 const STATUS_BAR_H    = Platform.OS === 'android' ? (RNStatusBar.currentHeight ?? 24) : 0;
 const NAV_PADDING_TOP = Platform.OS === 'ios' ? 54 : STATUS_BAR_H + 10;
@@ -1004,30 +1146,46 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<Tab>('home');
   const r = useResponsive();
 
-  const handleEmail = () =>
-    Linking.openURL('https://mail.google.com/mail/?view=cm&to=iamstorage24@gmail.com');
+  const handleEmail = () => Linking.openURL('https://mail.google.com/mail/?view=cm&to=iamstorage24@gmail.com');
   const handlePhone = () => Linking.openURL('tel:09480681543');
 
-  const homeRef    = useRef<ScrollView>(null);
-  const projectRef = useRef<ScrollView>(null);
-  const switchTab  = (tab: Tab) => {
-    setActiveTab(tab);
-    if (tab === 'home')     homeRef.current?.scrollTo({ y: 0, animated: false });
-    if (tab === 'projects') projectRef.current?.scrollTo({ y: 0, animated: false });
+  const homeRef           = useRef<ScrollView>(null);
+  const projectRef        = useRef<ScrollView>(null);
+  const contactSectionRef = useRef<View>(null);
+
+  const switchTab = (tab: Tab) => {
+    if (tab === 'contact') {
+      setActiveTab('home');
+      setTimeout(() => {
+        contactSectionRef.current?.measureLayout(
+          homeRef.current as any,
+          (_x, y) => { homeRef.current?.scrollTo({ y, animated: true }); },
+          ()      => { homeRef.current?.scrollToEnd({ animated: true }); }
+        );
+      }, 80);
+    } else {
+      setActiveTab(tab);
+      if (tab === 'home')     homeRef.current?.scrollTo({ y: 0, animated: false });
+      if (tab === 'projects') projectRef.current?.scrollTo({ y: 0, animated: false });
+    }
   };
+
+  const NAV_TABS: { key: Tab; label: string }[] = [
+    { key: 'home',     label: 'Portfolio' },
+    { key: 'projects', label: 'Projects'  },
+    { key: 'contact',  label: 'Contact'   },
+  ];
 
   return (
     <View style={{ flex: 1, backgroundColor: C.grad1 }}>
       <StatusBar style="light" />
       <AnimatedGradientBg />
 
-      {/* NAV BAR */}
+      {/* ── NAV BAR ── */}
       <View style={{
         backgroundColor: 'rgba(11,15,26,0.90)',
-        borderBottomWidth: StyleSheet.hairlineWidth,
-        borderBottomColor: C.border,
-        paddingTop: NAV_PADDING_TOP,
-        paddingHorizontal: r.px,
+        borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: C.border,
+        paddingTop: NAV_PADDING_TOP, paddingHorizontal: r.px,
       }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingBottom: 10 }}>
           <Text style={{ fontFamily: 'serif', fontSize: r.fs.navLogo, fontWeight: '600', color: C.text, letterSpacing: -0.3 }}>
@@ -1035,32 +1193,35 @@ export default function App() {
           </Text>
         </View>
         <View style={{ flexDirection: 'row', borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: C.border }}>
-          {(['home', 'projects'] as Tab[]).map((tab) => (
-            <TouchableOpacity
-              key={tab}
-              style={{ flex: 1, paddingVertical: 11, alignItems: 'center', position: 'relative' }}
-              onPress={() => switchTab(tab)}
-              activeOpacity={0.7}
-            >
-              <Text style={{
-                fontSize: r.isSmall ? 11 : 12, fontWeight: '500',
-                color: activeTab === tab ? C.accent : C.hint,
-                letterSpacing: 0.5, textTransform: 'uppercase',
-              }}>
-                {tab === 'home' ? 'Portfolio' : 'Projects'}
-              </Text>
-              {activeTab === tab && (
-                <View style={{
-                  position: 'absolute', bottom: 0, left: '20%', right: '20%',
-                  height: 2, backgroundColor: C.accent, borderRadius: 2,
-                }} />
-              )}
-            </TouchableOpacity>
-          ))}
+          {NAV_TABS.map((tab) => {
+            const isActive = activeTab === tab.key;
+            return (
+              <TouchableOpacity
+                key={tab.key}
+                style={{ flex: 1, paddingVertical: 11, alignItems: 'center', position: 'relative' }}
+                onPress={() => switchTab(tab.key)}
+                activeOpacity={0.7}
+              >
+                <Text style={{
+                  fontSize: r.isSmall ? 11 : 12, fontWeight: '500',
+                  color: isActive ? C.accent : C.hint,
+                  letterSpacing: 0.5, textTransform: 'uppercase',
+                }}>
+                  {tab.label}
+                </Text>
+                {isActive && (
+                  <View style={{
+                    position: 'absolute', bottom: 0, left: '20%', right: '20%',
+                    height: 2, backgroundColor: C.accent, borderRadius: 2,
+                  }} />
+                )}
+              </TouchableOpacity>
+            );
+          })}
         </View>
       </View>
 
-      {/* HOME PAGE */}
+      {/* ── HOME PAGE ── */}
       {activeTab === 'home' && (
         <ScrollView
           ref={homeRef}
@@ -1081,7 +1242,7 @@ export default function App() {
 
           <View style={{ paddingHorizontal: r.px, paddingVertical: r.isSmall ? 20 : 28 }}>
             <SectionHeader title="Experience" r={r} />
-            {EXPERIENCE.map((item) => <ExpCard key={item.year} item={item} r={r} />)}
+            {EXPERIENCE.map((item) => <ExpCard key={item.role} item={item} r={r} />)}
           </View>
           <Divider />
 
@@ -1101,25 +1262,67 @@ export default function App() {
           </View>
           <Divider />
 
-          <View style={{ paddingHorizontal: r.px, paddingVertical: r.isSmall ? 20 : 28 }}>
+          {/* ── CONTACT SECTION ── */}
+          <View
+            ref={contactSectionRef}
+            style={{ paddingHorizontal: r.px, paddingVertical: r.isSmall ? 20 : 28 }}
+          >
             <Text style={{ fontFamily: 'serif', fontSize: r.isSmall ? 20 : 24, fontWeight: '500', color: C.text, marginBottom: 6 }}>
               Let's work together
             </Text>
-            <Text style={{ fontSize: r.fs.heroSub, color: C.muted, fontWeight: '300', lineHeight: 20, marginBottom: 18 }}>
+            <Text style={{ fontSize: r.fs.heroSub, color: C.muted, fontWeight: '300', lineHeight: 20, marginBottom: 20 }}>
               Looking for a dedicated IT graduate ready to contribute and grow? Reach out.
             </Text>
-            <TouchableOpacity
-              style={{ backgroundColor: C.accent, borderRadius: 10, paddingVertical: r.isSmall ? 12 : 13, alignItems: 'center', marginBottom: 10 }}
-              onPress={handleEmail} activeOpacity={0.8}
-            >
-              <Text style={{ fontSize: r.fs.contactBtn, fontWeight: '500', color: C.accentDark }}>iamstorage24@gmail.com</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={{ backgroundColor: 'transparent', borderWidth: 1, borderColor: C.borderMid, borderRadius: 10, paddingVertical: r.isSmall ? 12 : 13, alignItems: 'center' }}
-              onPress={handlePhone} activeOpacity={0.8}
-            >
-              <Text style={{ fontSize: r.fs.contactBtn, fontWeight: '500', color: C.text }}>09480681543</Text>
-            </TouchableOpacity>
+
+            <Text style={{ fontSize: 10, color: C.hint, fontWeight: '600', letterSpacing: 1.2, textTransform: 'uppercase', marginBottom: 10 }}>
+              Contact
+            </Text>
+
+            <ContactRow
+              iconName="call-outline"
+              iconColor="#34d399"
+              iconBg="rgba(52,211,153,0.12)"
+              iconBorder="rgba(52,211,153,0.25)"
+              title="Call Me"
+              subtitle="09480681543"
+              onPress={handlePhone}
+              r={r}
+            />
+            <ContactRow
+              iconName="mail-outline"
+              iconColor={C.accent}
+              iconBg={C.accentDim}
+              iconBorder={C.accentBorder}
+              title="Email"
+              subtitle="iamstorage24@gmail.com"
+              onPress={handleEmail}
+              r={r}
+            />
+
+            <Text style={{ fontSize: 10, color: C.hint, fontWeight: '600', letterSpacing: 1.2, textTransform: 'uppercase', marginTop: 10, marginBottom: 10 }}>
+              Socials
+            </Text>
+
+            <ContactRow
+              iconName="logo-facebook"
+              iconColor="#6b8cdb"
+              iconBg="rgba(59,89,152,0.18)"
+              iconBorder="rgba(59,89,152,0.35)"
+              title="Facebook"
+              subtitle="View Profile"
+              onPress={() => Linking.openURL('https://www.facebook.com/share/1Fwrk22X5Q/')}
+              r={r}
+            />
+            <ContactRow
+              iconName="logo-instagram"
+              iconColor="#e1306c"
+              iconBg="rgba(193,53,132,0.14)"
+              iconBorder="rgba(193,53,132,0.30)"
+              title="Instagram"
+              subtitle="@youmightknowmefrm"
+              onPress={() => Linking.openURL('https://www.instagram.com/youmightknowmefrm?igsh=MWhremF0MDc0ZnEyeA==')}
+              r={r}
+            />
           </View>
 
           <View style={{ paddingHorizontal: r.px, paddingVertical: 20, alignItems: 'center', borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: C.border }}>
@@ -1130,7 +1333,7 @@ export default function App() {
         </ScrollView>
       )}
 
-      {/* PROJECTS PAGE */}
+      {/* ── PROJECTS PAGE ── */}
       {activeTab === 'projects' && (
         <ProjectsPage r={r} scrollRef={projectRef} />
       )}
