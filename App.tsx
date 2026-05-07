@@ -57,6 +57,9 @@ const SKILLS = [
   { name: 'Git & GitHub', level: 'Version Control', color: '#94a3b8', bg: 'rgba(148,163,184,0.12)', icon: 'https://cdn.jsdelivr.net/gh/devicons/devicon/icons/github/github-original.svg'          },
   { name: 'Node.js',      level: 'Runtime',         color: '#86efac', bg: 'rgba(134,239,172,0.12)', icon: 'https://cdn.jsdelivr.net/gh/devicons/devicon/icons/nodejs/nodejs-original.svg'          },
   { name: 'Python',       level: 'Programming',     color: '#60a5fa', bg: 'rgba(96,165,250,0.12)',   icon: 'https://cdn.jsdelivr.net/gh/devicons/devicon/icons/python/python-original.svg'          },
+  { name: 'C++',         level: 'Programming',     color: '#a78bfa', bg: 'rgba(167,139,250,0.12)', icon: 'https://cdn.jsdelivr.net/gh/devicons/devicon/icons/cplusplus/cplusplus-original.svg'    },
+  { name: 'Arduino IDE', level: 'Embedded Dev',    color: '#34d399', bg: 'rgba(52,211,153,0.12)',  icon: 'https://cdn.jsdelivr.net/gh/devicons/devicon/icons/arduino/arduino-original.svg'        },
+  { name: 'ESP32',       level: 'IoT / Hardware',  color: '#f87171', bg: 'rgba(248,113,113,0.12)', icon: 'https://cdn.jsdelivr.net/gh/devicons/devicon/icons/embeddedc/embeddedc-original.svg'    },
 ];
 
 const EXPERIENCE = [
@@ -929,7 +932,7 @@ const HardwareTab = ({ r }: { r: R }) => {
               Introduction
             </Text>
             <Text style={{ fontSize: r.isSmall ? 11 : 12, color: C.muted, lineHeight: r.isSmall ? 18 : 20 }}>
-              An IoT-based smart physical trash bin system integrated with a custom mobile application for real-time waste monitoring and management. The project combines multiple ESP32 microcontrollers, wireless communication, computer vision, sensors, and Firebase cloud integration to automate waste segregation and remotely monitor trash storage levels through an internet-connected application.
+              An IoT-based smart physical trash bin system integrated with a custom mobile application for real-time waste monitoring and management. The project combines multiple ESP32 microcontrollers, wireless communication, computer vision, sensors, and Firebase cloud integration to automate waste segregation and remotely monitor trash storage levels through an internet-connected application. Developed using Arduino IDE with C++ programming for embedded system control, sensor integration, and communication between hardware components.
             </Text>
           </View>
 
