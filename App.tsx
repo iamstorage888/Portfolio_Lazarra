@@ -446,13 +446,11 @@ const TerminalCover = ({ r, height }: { r: R; height: number }) => {
 };
 
 // ─── BIO TYPING TEXT ─────────────────────────────────────────────────────────
-// Types once, cursor blinks 3× then disappears — text stays permanently.
 const BioTypingText = ({ r }: { r: R }) => {
   const { displayed, done } = useOneShotTyping(BIO_TEXT, BIO_TYPING_SPEED);
   const cursorOpacity = useRef(new Animated.Value(1)).current;
   const loopRef       = useRef<Animated.CompositeAnimation | null>(null);
 
-  // While typing: blink cursor continuously
   useEffect(() => {
     if (done) return;
     loopRef.current = Animated.loop(
@@ -465,7 +463,6 @@ const BioTypingText = ({ r }: { r: R }) => {
     return () => loopRef.current?.stop();
   }, [done]);
 
-  // When done: stop loop, blink 3× then fade out permanently
   useEffect(() => {
     if (!done) return;
     loopRef.current?.stop();
@@ -477,7 +474,6 @@ const BioTypingText = ({ r }: { r: R }) => {
       Animated.timing(cursorOpacity, { toValue: 1, duration: 380, useNativeDriver: true }),
       Animated.timing(cursorOpacity, { toValue: 0, duration: 380, useNativeDriver: true }),
       Animated.timing(cursorOpacity, { toValue: 1, duration: 380, useNativeDriver: true }),
-      // final fade-out — stays at 0
       Animated.timing(cursorOpacity, { toValue: 0, duration: 500, useNativeDriver: true }),
     ]).start();
   }, [done]);
@@ -492,7 +488,6 @@ const BioTypingText = ({ r }: { r: R }) => {
       }}>
         {displayed}
       </Text>
-      {/* Thin blinking cursor after the last typed character */}
       <Animated.View style={{
         width: 2,
         height: r.fs.heroSub + 2,
@@ -557,7 +552,6 @@ const CoverHero = ({ r }: { r: R }) => {
           Frontend &amp; UI Developer
         </Text>
 
-        {/* ── ONE-SHOT BIO TYPING ANIMATION ── */}
         <BioTypingText r={r} />
 
         <View style={{ flexDirection: 'row', gap: r.isSmall ? 6 : 8, marginBottom: r.isSmall ? 16 : 18 }}>
@@ -799,7 +793,6 @@ const HardwareTab = ({ r }: { r: R }) => {
   const videoRef = useRef<Video>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
 
-  // Portrait video: fixed width ~55% of screen, height derived from 9:16 ratio
   const PORTRAIT_W = Math.min(r.width * 0.55, 220);
   const PORTRAIT_H = PORTRAIT_W * (16 / 9);
 
@@ -830,7 +823,7 @@ const HardwareTab = ({ r }: { r: R }) => {
         overflow: 'hidden', marginBottom: 14,
       }}>
 
-        {/* ── PORTRAIT VIDEO: centered, not stretched ── */}
+        {/* Portrait video preview */}
         <TouchableOpacity onPress={() => setIsFullscreen(true)} activeOpacity={0.92}>
           <View style={{
             backgroundColor: '#000',
@@ -838,7 +831,6 @@ const HardwareTab = ({ r }: { r: R }) => {
             justifyContent: 'center',
             paddingVertical: 18,
           }}>
-            {/* Portrait frame — fixed 9:16 size, centered */}
             <View style={{
               width: PORTRAIT_W,
               height: PORTRAIT_H,
@@ -846,24 +838,23 @@ const HardwareTab = ({ r }: { r: R }) => {
               overflow: 'hidden',
               backgroundColor: '#000',
             }}>
-<Video
-  source={require('./assets/1000035985.mp4')}
-  style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
-  resizeMode={ResizeMode.CONTAIN}
-  shouldPlay={true}
-  isLooping={true}
-  isMuted={false}
-  useNativeControls={true}
-/>
+              <Video
+                source={require('./assets/1000035985.mp4')}
+                style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
+                resizeMode={ResizeMode.CONTAIN}
+                shouldPlay={true}
+                isLooping={true}
+                isMuted={false}
+                useNativeControls={true}
+              />
             </View>
 
-            {/* Subtle bottom gradient over the whole touch area */}
             <LinearGradient
               colors={['transparent', 'rgba(0,0,0,0.40)']}
               style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 50 }}
             />
 
-            {/* Muted badge — top left */}
+            {/* Muted badge */}
             <View style={{
               position: 'absolute', top: 24, left: 16,
               backgroundColor: 'rgba(0,0,0,0.60)',
@@ -875,7 +866,7 @@ const HardwareTab = ({ r }: { r: R }) => {
               <Text style={{ fontSize: 9, color: C.muted, fontWeight: '600', letterSpacing: 0.4 }}>MUTED</Text>
             </View>
 
-            {/* Hardware badge — top right */}
+            {/* Hardware badge */}
             <View style={{
               position: 'absolute', top: 24, right: 16,
               backgroundColor: 'rgba(0,255,136,0.12)',
@@ -887,7 +878,7 @@ const HardwareTab = ({ r }: { r: R }) => {
               <Text style={{ fontSize: 9, color: C.termGreen, fontWeight: '600', letterSpacing: 0.4 }}>HARDWARE</Text>
             </View>
 
-            {/* Tap for fullscreen — bottom right */}
+            {/* Tap for fullscreen badge */}
             <View style={{
               position: 'absolute', bottom: 22, right: 16,
               backgroundColor: 'rgba(0,0,0,0.60)',
@@ -923,45 +914,46 @@ const HardwareTab = ({ r }: { r: R }) => {
           </View>
 
           {/* Introduction */}
-<View style={{ marginBottom: 10 }}>
-  <Text style={{
-    fontSize: r.isSmall ? 10 : 11, fontWeight: '700',
-    color: C.termGreen, letterSpacing: 1,
-    textTransform: 'uppercase', marginBottom: 4,
-  }}>
-    Introduction
-  </Text>
-  <Text style={{ fontSize: r.isSmall ? 11 : 12, color: C.muted, lineHeight: r.isSmall ? 17 : 18 }}>
-    An IoT-based smart physical trash bin system integrated with a custom mobile application for real-time waste monitoring and management. The project combines multiple ESP32 microcontrollers, wireless communication, computer vision, sensors, and Firebase cloud integration to automate waste segregation and remotely monitor trash storage levels through an internet-connected application.
-  </Text>
-</View>
+          <View style={{ marginBottom: 10 }}>
+            <Text style={{
+              fontSize: r.isSmall ? 10 : 11, fontWeight: '700',
+              color: C.termGreen, letterSpacing: 1,
+              textTransform: 'uppercase', marginBottom: 4,
+            }}>
+              Introduction
+            </Text>
+            <Text style={{ fontSize: r.isSmall ? 11 : 12, color: C.muted, lineHeight: r.isSmall ? 17 : 18 }}>
+              An IoT-based smart physical trash bin system integrated with a custom mobile application for real-time waste monitoring and management. The project combines multiple ESP32 microcontrollers, wireless communication, computer vision, sensors, and Firebase cloud integration to automate waste segregation and remotely monitor trash storage levels through an internet-connected application.
+            </Text>
+          </View>
 
-{/* Description */}
-<View style={{ marginBottom: 12 }}>
-  <Text style={{
-    fontSize: r.isSmall ? 10 : 11, fontWeight: '700',
-    color: C.termGreen, letterSpacing: 1,
-    textTransform: 'uppercase', marginBottom: 4,
-  }}>
-    Description
-  </Text>
+          {/* Description */}
+          <View style={{ marginBottom: 12 }}>
+            <Text style={{
+              fontSize: r.isSmall ? 10 : 11, fontWeight: '700',
+              color: C.termGreen, letterSpacing: 1,
+              textTransform: 'uppercase', marginBottom: 4,
+            }}>
+              Description
+            </Text>
 
-  <Text style={{ fontSize: r.isSmall ? 11 : 12, color: C.muted, lineHeight: r.isSmall ? 17 : 18, marginBottom: 8 }}>
-    The system is powered by 4 ESP32 boards that communicate with each other wirelessly to perform different tasks within the smart trash bin environment.
-  </Text>
+            <Text style={{ fontSize: r.isSmall ? 11 : 12, color: C.muted, lineHeight: r.isSmall ? 17 : 18, marginBottom: 8 }}>
+              The system is powered by 4 ESP32 boards that communicate with each other wirelessly to perform different tasks within the smart trash bin environment.
+            </Text>
 
-  <Text style={{ fontSize: r.isSmall ? 11 : 12, color: C.muted, lineHeight: r.isSmall ? 17 : 18, marginBottom: 8 }}>
-    One ESP32 board is connected to a camera module responsible for identifying different types of waste such as paper, plastic, metal, and unknown/random trash. After detecting the trash category, the camera module wirelessly communicates with another ESP32 board that controls the servo motors connected to a 4-way trap door mechanism. This mechanism automatically directs the detected trash into its designated storage compartment.
-  </Text>
+            <Text style={{ fontSize: r.isSmall ? 11 : 12, color: C.muted, lineHeight: r.isSmall ? 17 : 18, marginBottom: 8 }}>
+              One ESP32 board is connected to a camera module responsible for identifying different types of waste such as paper, plastic, metal, and unknown/random trash. After detecting the trash category, the camera module wirelessly communicates with another ESP32 board that controls the servo motors connected to a 4-way trap door mechanism. This mechanism automatically directs the detected trash into its designated storage compartment.
+            </Text>
 
-  <Text style={{ fontSize: r.isSmall ? 11 : 12, color: C.muted, lineHeight: r.isSmall ? 17 : 18, marginBottom: 8 }}>
-    Inside the trash storage section, ultrasonic sensors connected to another dedicated ESP32 board continuously monitor how full each of the four storage compartments is. The collected fill-level data is then sent wirelessly to a separate ESP32 board connected to a TFT display screen, which visually shows the real-time storage status of all trash categories.
-  </Text>
+            <Text style={{ fontSize: r.isSmall ? 11 : 12, color: C.muted, lineHeight: r.isSmall ? 17 : 18, marginBottom: 8 }}>
+              Inside the trash storage section, ultrasonic sensors connected to another dedicated ESP32 board continuously monitor how full each of the four storage compartments is. The collected fill-level data is then sent wirelessly to a separate ESP32 board connected to a TFT display screen, which visually shows the real-time storage status of all trash categories.
+            </Text>
 
-  <Text style={{ fontSize: r.isSmall ? 11 : 12, color: C.muted, lineHeight: r.isSmall ? 17 : 18 }}>
-    The TFT display ESP32 also serves as the main communication bridge between the hardware system and the custom mobile application. Using Firebase for cloud synchronization, this board sends real-time monitoring data to the mobile app, allowing users and administrators to remotely check the status of the trash bins. This is the only ESP32 board that requires an internet connection in order to communicate with the application and enable remote monitoring functionality.
-  </Text>
-</View>
+            <Text style={{ fontSize: r.isSmall ? 11 : 12, color: C.muted, lineHeight: r.isSmall ? 17 : 18 }}>
+              The TFT display ESP32 also serves as the main communication bridge between the hardware system and the custom mobile application. Using Firebase for cloud synchronization, this board sends real-time monitoring data to the mobile app, allowing users and administrators to remotely check the status of the trash bins. This is the only ESP32 board that requires an internet connection in order to communicate with the application and enable remote monitoring functionality.
+            </Text>
+          </View>
+
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 5 }}>
             {['React Native', 'Expo', 'Firebase', 'IoT', 'Hardware'].map((t) => (
               <View key={t} style={{
@@ -977,44 +969,38 @@ const HardwareTab = ({ r }: { r: R }) => {
         </View>
       </View>
 
-      {/* Fullscreen Modal */}
-<Modal
-  visible={isFullscreen}
-  animationType="fade"
-  statusBarTranslucent
-  supportedOrientations={['portrait', 'landscape']}
-  onRequestClose={() => setIsFullscreen(false)}
->
-  <View style={{ flex: 1, backgroundColor: '#000', justifyContent: 'center', alignItems: 'center' }}>
-    {/* Force portrait 9:16 box, centered on screen */}
-    <View style={{
-      width: r.width * 0.56,
-      height: r.width * 0.56 * (16 / 9),
-      maxHeight: '92%',
-    }}>
-      <Video
-        source={require('./assets/1000035985.mp4')}
-        style={{ width: '100%', height: '100%' }}
-        resizeMode={ResizeMode.COVER}
-        shouldPlay={true}
-        isLooping={true}
-        isMuted={false}
-        useNativeControls={true}
-      />
-    </View>
-    <TouchableOpacity
-      onPress={() => setIsFullscreen(false)}
-      style={{
-        position: 'absolute', top: 50, right: 20,
-        backgroundColor: 'rgba(0,0,0,0.65)',
-        borderRadius: 22, padding: 10,
-        borderWidth: 1, borderColor: 'rgba(255,255,255,0.20)',
-      }}
-    >
-      <Ionicons name="close" size={24} color="#fff" />
-    </TouchableOpacity>
-  </View>
-</Modal>
+      {/* ── FULLSCREEN MODAL (FIXED) ── */}
+      <Modal
+        visible={isFullscreen}
+        animationType="fade"
+        statusBarTranslucent
+        supportedOrientations={['portrait', 'landscape']}
+        onRequestClose={() => setIsFullscreen(false)}
+      >
+        <View style={{ flex: 1, backgroundColor: '#000' }}>
+          <Video
+            source={require('./assets/1000035985.mp4')}
+            style={{ flex: 1, width: '100%', height: '100%' }}
+            resizeMode={ResizeMode.CONTAIN}
+            shouldPlay={true}
+            isLooping={true}
+            isMuted={false}
+            useNativeControls={true}
+          />
+          <TouchableOpacity
+            onPress={() => setIsFullscreen(false)}
+            style={{
+              position: 'absolute', top: 50, right: 20,
+              backgroundColor: 'rgba(0,0,0,0.65)',
+              borderRadius: 22, padding: 10,
+              borderWidth: 1, borderColor: 'rgba(255,255,255,0.20)',
+            }}
+          >
+            <Ionicons name="close" size={24} color="#fff" />
+          </TouchableOpacity>
+        </View>
+      </Modal>
+
     </View>
   );
 };
