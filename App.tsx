@@ -12,10 +12,14 @@ import {
   useWindowDimensions,
   Image,
   Modal,
+  Alert,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { Video, ResizeMode } from 'expo-av';
+import * as FileSystem from 'expo-file-system';
+import * as Sharing from 'expo-sharing';
+import { Asset } from 'expo-asset';
 
 // ─── RESPONSIVE HELPERS ───────────────────────────────────────────────────────
 function useResponsive() {
@@ -47,6 +51,8 @@ function useResponsive() {
   return { width, isSmall, isMedium, px, gap, cardW, fs };
 }
 
+type R = ReturnType<typeof useResponsive>;
+
 // ─── DATA ────────────────────────────────────────────────────────────────────
 const SKILLS = [
   { name: 'React Native', level: 'Frontend',       color: '#60a5fa', bg: 'rgba(96,165,250,0.12)',   icon: 'https://cdn.jsdelivr.net/gh/devicons/devicon/icons/react/react-original.svg'           },
@@ -57,9 +63,9 @@ const SKILLS = [
   { name: 'Git & GitHub', level: 'Version Control', color: '#94a3b8', bg: 'rgba(148,163,184,0.12)', icon: 'https://cdn.jsdelivr.net/gh/devicons/devicon/icons/github/github-original.svg'          },
   { name: 'Node.js',      level: 'Runtime',         color: '#86efac', bg: 'rgba(134,239,172,0.12)', icon: 'https://cdn.jsdelivr.net/gh/devicons/devicon/icons/nodejs/nodejs-original.svg'          },
   { name: 'Python',       level: 'Programming',     color: '#60a5fa', bg: 'rgba(96,165,250,0.12)',   icon: 'https://cdn.jsdelivr.net/gh/devicons/devicon/icons/python/python-original.svg'          },
-  { name: 'C++',         level: 'Programming',     color: '#a78bfa', bg: 'rgba(167,139,250,0.12)', icon: 'https://cdn.jsdelivr.net/gh/devicons/devicon/icons/cplusplus/cplusplus-original.svg'    },
-  { name: 'Arduino IDE', level: 'Embedded Dev',    color: '#34d399', bg: 'rgba(52,211,153,0.12)',  icon: 'https://cdn.jsdelivr.net/gh/devicons/devicon/icons/arduino/arduino-original.svg'        },
-  { name: 'ESP32',       level: 'IoT / Hardware',  color: '#f87171', bg: 'rgba(248,113,113,0.12)', icon: 'https://cdn.jsdelivr.net/gh/devicons/devicon/icons/embeddedc/embeddedc-original.svg'    },
+  { name: 'C++',          level: 'Programming',     color: '#a78bfa', bg: 'rgba(167,139,250,0.12)', icon: 'https://cdn.jsdelivr.net/gh/devicons/devicon/icons/cplusplus/cplusplus-original.svg'    },
+  { name: 'Arduino IDE',  level: 'Embedded Dev',    color: '#34d399', bg: 'rgba(52,211,153,0.12)',  icon: 'https://cdn.jsdelivr.net/gh/devicons/devicon/icons/arduino/arduino-original.svg'        },
+  { name: 'ESP32',        level: 'IoT / Hardware',  color: '#f87171', bg: 'rgba(248,113,113,0.12)', icon: 'https://cdn.jsdelivr.net/gh/devicons/devicon/icons/embeddedc/embeddedc-original.svg'    },
 ];
 
 const EXPERIENCE = [
@@ -160,9 +166,43 @@ const C = {
   termAmber: '#ffb800',
 };
 
+// ─── CV HELPERS ───────────────────────────────────────────────────────────────
+const CV_FILENAME = 'Jhon_Rey_Lazarra_CV.docx';
+
+async function shareResume(): Promise<void> {
+  const canShare = await Sharing.isAvailableAsync();
+  if (!canShare) {
+    Alert.alert('Not supported', 'Sharing is not available on this device.');
+    return;
+  }
+
+  const dest = `${FileSystem.cacheDirectory}${CV_FILENAME}`;
+  const info = await FileSystem.getInfoAsync(dest);
+
+  if (!info.exists) {
+    const [asset] = await Asset.loadAsync(require('./assets/cv-base64.txt'));
+    const localUri = asset.localUri ?? asset.uri;
+    if (!localUri) {
+      throw new Error('Could not load cv-base64.txt asset. Make sure the file exists in ./assets/.');
+    }
+    const b64 = (await FileSystem.readAsStringAsync(localUri, {
+      encoding: FileSystem.EncodingType.UTF8,
+    })).trim();
+    await FileSystem.writeAsStringAsync(dest, b64, {
+      encoding: FileSystem.EncodingType.Base64,
+    });
+  }
+
+  await Sharing.shareAsync(dest, {
+    mimeType:    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    dialogTitle: 'Save or Share CV — Jhon Rey Lazarra',
+    UTI:         'com.microsoft.word.docx',
+  });
+}
+
 const COVER_IMAGE: any = null;
 
-// ─── LOOPING TYPING ANIMATION (terminal cover) ────────────────────────────────
+// ─── TYPING ANIMATIONS ───────────────────────────────────────────────────────
 const TYPING_TEXT    = "Hi I'm Jhon Rey, Welcome to my Website :]";
 const TYPING_SPEED   = 70;
 const DELETING_SPEED = 35;
@@ -171,9 +211,9 @@ const PAUSE_BEFORE   = 500;
 
 function useTypingAnimation() {
   const [displayed, setDisplayed] = useState('');
-  const phaseRef  = useRef<'typing' | 'pausing' | 'deleting' | 'waiting'>('typing');
-  const charRef   = useRef(0);
-  const timerRef  = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const phaseRef = useRef<'typing' | 'pausing' | 'deleting' | 'waiting'>('typing');
+  const charRef  = useRef(0);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     const tick = () => {
@@ -199,7 +239,7 @@ function useTypingAnimation() {
           phaseRef.current = 'waiting';
           timerRef.current = setTimeout(tick, PAUSE_BEFORE);
         }
-      } else if (phase === 'waiting') {
+      } else {
         phaseRef.current = 'typing';
         timerRef.current = setTimeout(tick, TYPING_SPEED);
       }
@@ -211,7 +251,6 @@ function useTypingAnimation() {
   return displayed;
 }
 
-// ─── ONE-SHOT TYPING ANIMATION (bio paragraph) ───────────────────────────────
 const BIO_TEXT =
   'Aspiring IT graduate with a strong foundation in frontend development, focused on building clean and user-friendly interfaces. Experienced in hardware troubleshooting and maintenance, with a practical, hands-on approach to solving technical issues. Currently learning and actively working on backend development and API integrations, building full-stack capabilities through real projects. A collaborative "vibe coder" who enjoys creating with creativity, flow, and problem-solving energy.';
 
@@ -253,6 +292,28 @@ function useCursorBlink(speed = 530) {
   return opacity;
 }
 
+function useGlitch() {
+  const x = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    const runGlitch = () => {
+      Animated.sequence([
+        Animated.timing(x, { toValue: 2,  duration: 60,  useNativeDriver: true }),
+        Animated.timing(x, { toValue: -2, duration: 60,  useNativeDriver: true }),
+        Animated.timing(x, { toValue: 1,  duration: 40,  useNativeDriver: true }),
+        Animated.timing(x, { toValue: 0,  duration: 40,  useNativeDriver: true }),
+      ]).start();
+    };
+    const schedule = () => {
+      const delay = 4000 + Math.random() * 3000;
+      return setTimeout(() => { runGlitch(); schedule(); }, delay);
+    };
+    const id = schedule();
+    return () => clearTimeout(id);
+  }, []);
+  return x;
+}
+
+// ─── PRIMITIVE ANIMATED COMPONENTS ───────────────────────────────────────────
 const AnimatedGradientBg = () => {
   const anim = useRef(new Animated.Value(0)).current;
   useEffect(() => {
@@ -299,30 +360,145 @@ const PulseDot = () => {
   );
 };
 
-function useGlitch() {
-  const x = useRef(new Animated.Value(0)).current;
+// ─── SHARED UI COMPONENTS ─────────────────────────────────────────────────────
+const Divider = () => (
+  <View style={{ height: StyleSheet.hairlineWidth, backgroundColor: C.border }} />
+);
+
+const Tag = ({ label, r }: { label: string; r: R }) => (
+  <View style={{
+    paddingHorizontal: 8, paddingVertical: 4, borderRadius: 20,
+    backgroundColor: C.accentDim, borderWidth: 1, borderColor: C.accentBorder,
+  }}>
+    <Text style={{ fontSize: r.fs.tag, fontWeight: '600', letterSpacing: 0.5, color: C.accent }}>
+      {label.toUpperCase()}
+    </Text>
+  </View>
+);
+
+const SectionHeader = ({ title, r }: { title: string; r: R }) => (
+  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+    <Text style={{ fontFamily: 'serif', fontSize: r.fs.sectionTitle, fontWeight: '500', color: C.text }}>
+      {title}
+    </Text>
+    <View style={{ flex: 1, height: StyleSheet.hairlineWidth, backgroundColor: C.border }} />
+  </View>
+);
+
+// ─── MINI CV BUTTON (must be before CoverHero) ───────────────────────────────
+const MiniCvButton = ({ r }: { r: R }) => {
+  const [loading, setLoading] = useState(false);
+
+  const handlePress = async () => {
+    if (loading) return;
+    setLoading(true);
+    try {
+      await shareResume();
+    } catch (err: any) {
+      Alert.alert('Error', err?.message ?? 'Failed to share CV.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <TouchableOpacity
+      onPress={handlePress}
+      activeOpacity={0.8}
+      disabled={loading}
+      style={{
+        flexDirection: 'row', alignItems: 'center', gap: 5,
+        backgroundColor: 'rgba(0,255,136,0.10)',
+        borderWidth: 1, borderColor: 'rgba(0,255,136,0.30)',
+        paddingHorizontal: 10, paddingVertical: 5,
+        borderRadius: 20, marginBottom: 4,
+      }}
+    >
+      <Ionicons
+        name={loading ? 'hourglass-outline' : 'download-outline'}
+        size={11}
+        color={C.termGreen}
+      />
+      <Text style={{ fontSize: r.isSmall ? 9 : 11, fontWeight: '500', color: C.termGreen, letterSpacing: 0.4 }}>
+        {loading ? '…' : 'Get CV'}
+      </Text>
+    </TouchableOpacity>
+  );
+};
+
+// ─── RESUME DOWNLOAD BUTTON (must be before contact section render) ───────────
+const ResumeDownloadButton = ({ r }: { r: R }) => {
+  const [loading, setLoading] = useState(false);
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+
   useEffect(() => {
-    const runGlitch = () => {
+    Animated.loop(
       Animated.sequence([
-        Animated.timing(x, { toValue: 2,  duration: 60,  useNativeDriver: true }),
-        Animated.timing(x, { toValue: -2, duration: 60,  useNativeDriver: true }),
-        Animated.timing(x, { toValue: 1,  duration: 40,  useNativeDriver: true }),
-        Animated.timing(x, { toValue: 0,  duration: 40,  useNativeDriver: true }),
-      ]).start();
-    };
-    const schedule = () => {
-      const delay = 4000 + Math.random() * 3000;
-      return setTimeout(() => { runGlitch(); schedule(); }, delay);
-    };
-    const id = schedule();
-    return () => clearTimeout(id);
+        Animated.timing(pulseAnim, { toValue: 1.10, duration: 1500, useNativeDriver: true }),
+        Animated.timing(pulseAnim, { toValue: 1,    duration: 1500, useNativeDriver: true }),
+      ])
+    ).start();
   }, []);
-  return x;
-}
 
-type R = ReturnType<typeof useResponsive>;
+  const handlePress = async () => {
+    if (loading) return;
+    setLoading(true);
+    try {
+      await shareResume();
+    } catch (err: any) {
+      Alert.alert('Error', err?.message ?? 'Failed to share CV. Make sure cv-base64.txt exists in ./assets/.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
-// ─── TERMINAL COVER ──────────────────────────────────────────────────────────
+  return (
+    <TouchableOpacity
+      onPress={handlePress}
+      activeOpacity={0.82}
+      disabled={loading}
+      style={{
+        marginBottom: 10,
+        borderRadius: 14,
+        overflow: 'hidden',
+        borderWidth: 1,
+        borderColor: 'rgba(56,189,248,0.35)',
+      }}
+    >
+      <LinearGradient
+        colors={['rgba(56,189,248,0.18)', 'rgba(56,189,248,0.07)']}
+        start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+        style={{
+          flexDirection: 'row', alignItems: 'center',
+          paddingVertical: r.isSmall ? 13 : 15,
+          paddingHorizontal: r.isSmall ? 14 : 16,
+          gap: 14,
+        }}
+      >
+        <Animated.View style={{
+          width: 40, height: 40, borderRadius: 20,
+          backgroundColor: 'rgba(56,189,248,0.18)',
+          borderWidth: 1, borderColor: 'rgba(56,189,248,0.38)',
+          alignItems: 'center', justifyContent: 'center',
+          transform: [{ scale: pulseAnim }],
+        }}>
+          <Ionicons name={loading ? 'hourglass-outline' : 'document-text-outline'} size={20} color={C.accent} />
+        </Animated.View>
+        <View style={{ flex: 1 }}>
+          <Text style={{ fontSize: r.isSmall ? 13 : 14, fontWeight: '600', color: C.text, marginBottom: 2 }}>
+            {loading ? 'Preparing CV…' : 'Download My CV / Résumé'}
+          </Text>
+          <Text style={{ fontSize: r.isSmall ? 10 : 11, color: C.hint }}>
+            {CV_FILENAME}
+          </Text>
+        </View>
+        <Ionicons name={loading ? 'ellipsis-horizontal' : 'download-outline'} size={18} color={C.accent} />
+      </LinearGradient>
+    </TouchableOpacity>
+  );
+};
+
+// ─── TERMINAL COVER ───────────────────────────────────────────────────────────
 const TerminalCover = ({ r, height }: { r: R; height: number }) => {
   const displayed     = useTypingAnimation();
   const cursorOpacity = useCursorBlink(480);
@@ -341,7 +517,7 @@ const TerminalCover = ({ r, height }: { r: R; height: number }) => {
   });
 
   const activeColor = C.termGreen;
-  const monoFont = Platform.OS === 'ios' ? 'Courier New' : 'monospace';
+  const monoFont    = Platform.OS === 'ios' ? 'Courier New' : 'monospace';
 
   return (
     <View style={{ height, width: '100%', overflow: 'hidden' }}>
@@ -381,11 +557,11 @@ const TerminalCover = ({ r, height }: { r: R; height: number }) => {
       {/* Corner brackets */}
       <View style={{ position: 'absolute', top: 10, left: 12, opacity: 0.5 }}>
         <View style={{ width: 14, height: 2, backgroundColor: C.termGreen }} />
-        <View style={{ width: 2,  height: 14, backgroundColor: C.termGreen, marginTop: -2 }} />
+        <View style={{ width: 2, height: 14, backgroundColor: C.termGreen, marginTop: -2 }} />
       </View>
       <View style={{ position: 'absolute', top: 10, right: 12, opacity: 0.5, alignItems: 'flex-end' }}>
         <View style={{ width: 14, height: 2, backgroundColor: C.termGreen }} />
-        <View style={{ width: 2,  height: 14, backgroundColor: C.termGreen, marginTop: -2, alignSelf: 'flex-end' }} />
+        <View style={{ width: 2, height: 14, backgroundColor: C.termGreen, marginTop: -2, alignSelf: 'flex-end' }} />
       </View>
       <View style={{ position: 'absolute', bottom: 16, left: 12, opacity: 0.5, justifyContent: 'flex-end' }}>
         <View style={{ width: 2, height: 14, backgroundColor: C.termGreen }} />
@@ -435,7 +611,7 @@ const TerminalCover = ({ r, height }: { r: R; height: number }) => {
           }} />
         </Animated.View>
         <View style={{ flexDirection: 'row', gap: 5, marginTop: r.isSmall ? 10 : 14, alignItems: 'center', opacity: 0.4 }}>
-          {[0,1,2,3,4].map((i) => (
+          {[0, 1, 2, 3, 4].map((i) => (
             <View key={i} style={{ height: 2, width: 6, borderRadius: 1, backgroundColor: activeColor }} />
           ))}
         </View>
@@ -448,7 +624,7 @@ const TerminalCover = ({ r, height }: { r: R; height: number }) => {
   );
 };
 
-// ─── BIO TYPING TEXT ─────────────────────────────────────────────────────────
+// ─── BIO TYPING TEXT ──────────────────────────────────────────────────────────
 const BioTypingText = ({ r }: { r: R }) => {
   const { displayed, done } = useOneShotTyping(BIO_TEXT, BIO_TYPING_SPEED);
   const cursorOpacity = useRef(new Animated.Value(1)).current;
@@ -505,7 +681,8 @@ const BioTypingText = ({ r }: { r: R }) => {
   );
 };
 
-// ─── COVER HERO ──────────────────────────────────────────────────────────────
+// ─── COVER HERO ───────────────────────────────────────────────────────────────
+// NOTE: MiniCvButton must be defined above this component.
 const CoverHero = ({ r }: { r: R }) => {
   const COVER_H       = r.isSmall ? 160 : 195;
   const AVATAR_SIZE   = r.isSmall ? 95  : 112;
@@ -525,6 +702,7 @@ const CoverHero = ({ r }: { r: R }) => {
       ) : (
         <TerminalCover r={r} height={COVER_H} />
       )}
+
       <View style={{
         paddingHorizontal: r.px, marginTop: AVATAR_OFFSET,
         flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between',
@@ -535,15 +713,19 @@ const CoverHero = ({ r }: { r: R }) => {
         }}>
           <Image source={require('./assets/prof.png')} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
         </View>
-        <View style={{
-          flexDirection: 'row', alignItems: 'center', gap: 5,
-          backgroundColor: C.accentDim, borderWidth: 1, borderColor: C.accentBorder,
-          paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20, marginBottom: 4,
-        }}>
-          <PulseDot />
-          <Text style={{ fontSize: r.isSmall ? 9 : 11, fontWeight: '500', color: C.accent, letterSpacing: 0.4 }}>
-            Open to Work
-          </Text>
+
+        <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 6 }}>
+          <MiniCvButton r={r} />
+          <View style={{
+            flexDirection: 'row', alignItems: 'center', gap: 5,
+            backgroundColor: C.accentDim, borderWidth: 1, borderColor: C.accentBorder,
+            paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20, marginBottom: 4,
+          }}>
+            <PulseDot />
+            <Text style={{ fontSize: r.isSmall ? 9 : 11, fontWeight: '500', color: C.accent, letterSpacing: 0.4 }}>
+              Open to Work
+            </Text>
+          </View>
         </View>
       </View>
 
@@ -559,10 +741,10 @@ const CoverHero = ({ r }: { r: R }) => {
 
         <View style={{ flexDirection: 'row', gap: r.isSmall ? 6 : 8, marginBottom: r.isSmall ? 16 : 18 }}>
           {[
-            { num: '2025', label: 'Graduate' },
+            { num: '2025', label: 'Graduate'     },
             { num: '6+',   label: 'Technologies' },
-            { num: 'Gov.', label: 'Internship' },
-            { num: 'CTF',  label: 'Hackathon' },
+            { num: 'Gov.', label: 'Internship'   },
+            { num: 'CTF',  label: 'Hackathon'    },
           ].map((s) => (
             <View key={s.label} style={{
               flex: 1, backgroundColor: C.surfaceDark, borderRadius: 10,
@@ -574,6 +756,7 @@ const CoverHero = ({ r }: { r: R }) => {
             </View>
           ))}
         </View>
+
         <View style={{ flexDirection: 'row', gap: 6, flexWrap: 'wrap' }}>
           {['React Native', 'Expo', 'Firebase', 'JavaScript'].map((t) => (
             <View key={t} style={{
@@ -591,31 +774,7 @@ const CoverHero = ({ r }: { r: R }) => {
   );
 };
 
-// ─── SMALL COMPONENTS ────────────────────────────────────────────────────────
-const Divider = () => (
-  <View style={{ height: StyleSheet.hairlineWidth, backgroundColor: C.border }} />
-);
-
-const Tag = ({ label, r }: { label: string; r: R }) => (
-  <View style={{
-    paddingHorizontal: 8, paddingVertical: 4, borderRadius: 20,
-    backgroundColor: C.accentDim, borderWidth: 1, borderColor: C.accentBorder,
-  }}>
-    <Text style={{ fontSize: r.fs.tag, fontWeight: '600', letterSpacing: 0.5, color: C.accent }}>
-      {label.toUpperCase()}
-    </Text>
-  </View>
-);
-
-const SectionHeader = ({ title, r }: { title: string; r: R }) => (
-  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 16 }}>
-    <Text style={{ fontFamily: 'serif', fontSize: r.fs.sectionTitle, fontWeight: '500', color: C.text }}>
-      {title}
-    </Text>
-    <View style={{ flex: 1, height: StyleSheet.hairlineWidth, backgroundColor: C.border }} />
-  </View>
-);
-
+// ─── SKILL / EXP / EDU / CERT CARDS ──────────────────────────────────────────
 const SkillCard = ({ skill, r }: { skill: typeof SKILLS[0]; r: R }) => (
   <View style={{
     width: r.cardW, backgroundColor: C.surface, borderRadius: 12,
@@ -680,12 +839,13 @@ const CertCard = ({ cert, r }: { cert: typeof CERTS[0]; r: R }) => (
   </View>
 );
 
+// ─── PROJECT CARDS ────────────────────────────────────────────────────────────
 const ProjectCard = ({ project, r }: { project: typeof PROJECTS[0]; r: R }) => {
   const handleOpen = () => { if (project.url) Linking.openURL(project.url); };
-  const isGitHub = project.isGitHub;
-  const btnBg     = isGitHub ? C.githubDim    : C.accentDim;
-  const btnBorder = isGitHub ? C.githubBorder  : C.accentBorder;
-  const btnColor  = isGitHub ? C.github        : C.accent;
+  const isGitHub  = project.isGitHub;
+  const btnBg     = isGitHub ? C.githubDim   : C.accentDim;
+  const btnBorder = isGitHub ? C.githubBorder : C.accentBorder;
+  const btnColor  = isGitHub ? C.github       : C.accent;
   const btnLabel  = isGitHub ? 'View on GitHub →' : 'View Live Project →';
 
   return (
@@ -713,6 +873,7 @@ const ProjectCard = ({ project, r }: { project: typeof PROJECTS[0]; r: R }) => {
           </View>
         )}
       </LinearGradient>
+
       <View style={{ padding: r.isSmall ? 12 : 16 }}>
         <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 6 }}>
           <View style={{ flex: 1, marginRight: 8 }}>
@@ -733,9 +894,11 @@ const ProjectCard = ({ project, r }: { project: typeof PROJECTS[0]; r: R }) => {
             </Text>
           </View>
         </View>
+
         <Text style={{ fontSize: r.isSmall ? 11 : 12, color: C.muted, lineHeight: r.isSmall ? 17 : 18, marginBottom: 10, marginTop: 2 }}>
           {project.desc}
         </Text>
+
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 5 }}>
           {project.tech.map((t) => (
             <View key={t} style={{
@@ -746,6 +909,7 @@ const ProjectCard = ({ project, r }: { project: typeof PROJECTS[0]; r: R }) => {
             </View>
           ))}
         </View>
+
         {project.url && (
           <TouchableOpacity
             style={{
@@ -757,6 +921,7 @@ const ProjectCard = ({ project, r }: { project: typeof PROJECTS[0]; r: R }) => {
             <Text style={{ fontSize: r.isSmall ? 12 : 13, fontWeight: '600', color: btnColor }}>{btnLabel}</Text>
           </TouchableOpacity>
         )}
+
         {'githubUrl' in project && (project as any).githubUrl && (
           <TouchableOpacity
             style={{
@@ -791,16 +956,65 @@ const GitHubComingSoon = ({ r }: { r: R }) => (
   </View>
 );
 
-// ─── HARDWARE TAB ────────────────────────────────────────────────────────────
+// ─── FULLSCREEN VIDEO PLAYER (must be before HardwareTab) ────────────────────
+const FullscreenVideoPlayer = ({ onClose }: { onClose: () => void }) => {
+  const { width, height } = useWindowDimensions();
+
+  // Portrait video is 9:16. Fit it inside the screen without cropping.
+  const videoAspect  = 9 / 16;
+  const screenAspect = width / height;
+
+  let videoW: number;
+  let videoH: number;
+
+  if (screenAspect < videoAspect) {
+    // Screen is narrower than video aspect → constrain by width
+    videoW = width;
+    videoH = width / videoAspect;
+  } else {
+    // Screen is wider → constrain by height
+    videoH = height;
+    videoW = height * videoAspect;
+  }
+
+  return (
+    <View style={{ flex: 1, backgroundColor: '#000', justifyContent: 'center', alignItems: 'center' }}>
+      <View style={{ width: videoW, height: videoH }}>
+        <Video
+          source={require('./assets/1000035985.mp4')}
+          style={{ width: '100%', height: '100%' }}
+          resizeMode={ResizeMode.CONTAIN}
+          shouldPlay
+          isLooping
+          isMuted={false}
+          useNativeControls={true}
+        />
+      </View>
+
+      <TouchableOpacity
+        onPress={onClose}
+        style={{
+          position: 'absolute',
+          top: Platform.OS === 'ios' ? 54 : (RNStatusBar.currentHeight ?? 24) + 12,
+          right: 20,
+          backgroundColor: 'rgba(0,0,0,0.70)',
+          borderRadius: 22, padding: 10,
+          borderWidth: 1, borderColor: 'rgba(255,255,255,0.22)',
+        }}
+      >
+        <Ionicons name="close" size={24} color="#fff" />
+      </TouchableOpacity>
+    </View>
+  );
+};
+
+// ─── HARDWARE TAB (FullscreenVideoPlayer must be defined above) ───────────────
 const HardwareTab = ({ r }: { r: R }) => {
   const [isFullscreen, setIsFullscreen] = useState(false);
 
-  // ── Preview: portrait 9:16 box, capped so it never overflows
-  // Max preview height = 60% of screen height to stay comfortable on any phone
-  const maxPreviewH = r.width * 0.9; // generous but bounded
+  const maxPreviewH = r.width * 0.9;
   const PORTRAIT_W  = Math.min(r.width * 0.58, 240);
   const PORTRAIT_H  = Math.min(PORTRAIT_W * (16 / 9), maxPreviewH);
-  // Back-calculate width in case height was capped
   const FINAL_W     = PORTRAIT_H * (9 / 16);
 
   return (
@@ -829,41 +1043,25 @@ const HardwareTab = ({ r }: { r: R }) => {
         borderWidth: StyleSheet.hairlineWidth, borderColor: C.border,
         overflow: 'hidden', marginBottom: 14,
       }}>
-
-        {/* ── VIDEO PREVIEW (always muted, portrait, centered) ── */}
         <TouchableOpacity onPress={() => setIsFullscreen(true)} activeOpacity={0.92}>
-          <View style={{
-            backgroundColor: '#000',
-            alignItems: 'center',
-            justifyContent: 'center',
-            paddingVertical: 20,
-          }}>
-            {/* Portrait frame — explicitly sized, centered */}
-            <View style={{
-              width: FINAL_W,
-              height: PORTRAIT_H,
-              borderRadius: 12,
-              overflow: 'hidden',
-              backgroundColor: '#000',
-            }}>
+          <View style={{ backgroundColor: '#000', alignItems: 'center', justifyContent: 'center', paddingVertical: 20 }}>
+            <View style={{ width: FINAL_W, height: PORTRAIT_H, borderRadius: 12, overflow: 'hidden', backgroundColor: '#000' }}>
               <Video
                 source={require('./assets/1000035985.mp4')}
                 style={{ width: '100%', height: '100%' }}
                 resizeMode={ResizeMode.COVER}
                 shouldPlay
                 isLooping
-                isMuted={true}           // ← always muted in preview
-                useNativeControls={false} // ← no controls in preview
+                isMuted={true}
+                useNativeControls={false}
               />
             </View>
 
-            {/* Bottom fade */}
             <LinearGradient
               colors={['transparent', 'rgba(0,0,0,0.50)']}
               style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 60 }}
             />
 
-            {/* Muted badge — top left */}
             <View style={{
               position: 'absolute', top: 28, left: 16,
               backgroundColor: 'rgba(0,0,0,0.65)',
@@ -875,7 +1073,6 @@ const HardwareTab = ({ r }: { r: R }) => {
               <Text style={{ fontSize: 9, color: C.muted, fontWeight: '600', letterSpacing: 0.4 }}>MUTED</Text>
             </View>
 
-            {/* Hardware badge — top right */}
             <View style={{
               position: 'absolute', top: 28, right: 16,
               backgroundColor: 'rgba(0,255,136,0.12)',
@@ -887,7 +1084,6 @@ const HardwareTab = ({ r }: { r: R }) => {
               <Text style={{ fontSize: 9, color: C.termGreen, fontWeight: '600', letterSpacing: 0.4 }}>HARDWARE</Text>
             </View>
 
-            {/* Tap for fullscreen — bottom right */}
             <View style={{
               position: 'absolute', bottom: 26, right: 16,
               backgroundColor: 'rgba(0,0,0,0.65)',
@@ -905,30 +1101,19 @@ const HardwareTab = ({ r }: { r: R }) => {
         <View style={{ padding: r.isSmall ? 12 : 16 }}>
           <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 10 }}>
             <View style={{ flex: 1, marginRight: 8 }}>
-              <Text style={{ fontSize: r.fs.projName, fontWeight: '600', color: C.text, marginBottom: 2 }}>
-                🗑️ Smart Trash
-              </Text>
-              <Text style={{ fontSize: r.isSmall ? 10 : 11, color: C.hint }}>
-                IoT Hardware + Mobile App
-              </Text>
+              <Text style={{ fontSize: r.fs.projName, fontWeight: '600', color: C.text, marginBottom: 2 }}>🗑️ Smart Trash</Text>
+              <Text style={{ fontSize: r.isSmall ? 10 : 11, color: C.hint }}>IoT Hardware + Mobile App</Text>
             </View>
             <View style={{
               backgroundColor: 'rgba(52,211,153,0.12)', borderWidth: 1,
               borderColor: 'rgba(52,211,153,0.30)', paddingHorizontal: 7, paddingVertical: 3, borderRadius: 20,
             }}>
-              <Text style={{ fontSize: r.isSmall ? 7 : 9, fontWeight: '600', letterSpacing: 0.4, color: '#34d399' }}>
-                COMPLETED
-              </Text>
+              <Text style={{ fontSize: r.isSmall ? 7 : 9, fontWeight: '600', letterSpacing: 0.4, color: '#34d399' }}>COMPLETED</Text>
             </View>
           </View>
 
-          {/* Introduction */}
           <View style={{ marginBottom: 12 }}>
-            <Text style={{
-              fontSize: r.isSmall ? 10 : 11, fontWeight: '700',
-              color: C.termGreen, letterSpacing: 1,
-              textTransform: 'uppercase', marginBottom: 5,
-            }}>
+            <Text style={{ fontSize: r.isSmall ? 10 : 11, fontWeight: '700', color: C.termGreen, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 5 }}>
               Introduction
             </Text>
             <Text style={{ fontSize: r.isSmall ? 11 : 12, color: C.muted, lineHeight: r.isSmall ? 18 : 20 }}>
@@ -936,38 +1121,28 @@ const HardwareTab = ({ r }: { r: R }) => {
             </Text>
           </View>
 
-          {/* Thin divider between sections */}
           <View style={{ height: StyleSheet.hairlineWidth, backgroundColor: C.border, marginBottom: 12 }} />
 
-          {/* Description */}
           <View style={{ marginBottom: 14 }}>
-            <Text style={{
-              fontSize: r.isSmall ? 10 : 11, fontWeight: '700',
-              color: C.termGreen, letterSpacing: 1,
-              textTransform: 'uppercase', marginBottom: 5,
-            }}>
+            <Text style={{ fontSize: r.isSmall ? 10 : 11, fontWeight: '700', color: C.termGreen, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 5 }}>
               Description
             </Text>
-
             <Text style={{ fontSize: r.isSmall ? 11 : 12, color: C.muted, lineHeight: r.isSmall ? 18 : 20, marginBottom: 10 }}>
               The system is powered by 4 ESP32 boards that communicate with each other wirelessly to perform different tasks within the smart trash bin environment.
             </Text>
-
             <Text style={{ fontSize: r.isSmall ? 11 : 12, color: C.muted, lineHeight: r.isSmall ? 18 : 20, marginBottom: 10 }}>
               One ESP32 board is connected to a camera module responsible for identifying different types of waste such as paper, plastic, metal, and unknown/random trash. After detecting the trash category, the camera module wirelessly communicates with another ESP32 board that controls the servo motors connected to a 4-way trap door mechanism. This mechanism automatically directs the detected trash into its designated storage compartment.
             </Text>
-
             <Text style={{ fontSize: r.isSmall ? 11 : 12, color: C.muted, lineHeight: r.isSmall ? 18 : 20, marginBottom: 10 }}>
               Inside the trash storage section, ultrasonic sensors connected to another dedicated ESP32 board continuously monitor how full each of the four storage compartments is. The collected fill-level data is then sent wirelessly to a separate ESP32 board connected to a TFT display screen, which visually shows the real-time storage status of all trash categories.
             </Text>
-
             <Text style={{ fontSize: r.isSmall ? 11 : 12, color: C.muted, lineHeight: r.isSmall ? 18 : 20 }}>
               The TFT display ESP32 also serves as the main communication bridge between the hardware system and the custom mobile application. Using Firebase for cloud synchronization, this board sends real-time monitoring data to the mobile app, allowing users and administrators to remotely check the status of the trash bins. This is the only ESP32 board that requires an internet connection in order to communicate with the application and enable remote monitoring functionality.
             </Text>
           </View>
 
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 5 }}>
-            {['React Native', 'Expo', 'Firebase', 'IoT', 'Hardware'].map((t) => (
+            {['React Native', 'Expo', 'Firebase', 'IoT', 'Hardware', 'C++', 'Arduino IDE'].map((t) => (
               <View key={t} style={{
                 backgroundColor: 'rgba(255,255,255,0.06)', borderWidth: 1, borderColor: C.border,
                 borderRadius: 20, paddingHorizontal: 7, paddingVertical: 3,
@@ -981,13 +1156,7 @@ const HardwareTab = ({ r }: { r: R }) => {
         </View>
       </View>
 
-      {/* ── FULLSCREEN MODAL ──
-          Strategy: flex:1 black container + Video fills it with CONTAIN.
-          On Android, CONTAIN sometimes left-aligns portrait video inside a
-          landscape box. Fix: wrap in an explicitly square/portrait inner View
-          that is calculated to match the video's natural 9:16 ratio and is
-          centered inside the outer flex container. The Video then uses COVER
-          to fill that exact box — giving perfect centering on every screen. */}
+      {/* Fullscreen Modal */}
       <Modal
         visible={isFullscreen}
         animationType="fade"
@@ -1001,69 +1170,6 @@ const HardwareTab = ({ r }: { r: R }) => {
   );
 };
 
-// ─── FULLSCREEN VIDEO PLAYER ─────────────────────────────────────────────────
-// Separate component so it can call useWindowDimensions reactively when the
-// device rotates — giving us the live width/height to recompute the video box.
-const FullscreenVideoPlayer = ({ onClose }: { onClose: () => void }) => {
-  const { width, height } = useWindowDimensions();
-
-  // VIDEO is portrait (9:16). We want to show it as large as possible while:
-  //   a) fitting inside the screen
-  //   b) being perfectly centered both axes
-  const videoAspect = 9 / 16; // width / height for portrait video
-  const screenAspect = width / height;
-
-  let videoW: number;
-  let videoH: number;
-
-  if (screenAspect < videoAspect) {
-    // Screen is narrower than video aspect → constrain by width
-    videoW = width;
-    videoH = width / videoAspect;
-  } else {
-    // Screen is wider than video aspect → constrain by height
-    videoH = height;
-    videoW = height * videoAspect;
-  }
-
-  return (
-    <View style={{
-      flex: 1,
-      backgroundColor: '#000',
-      justifyContent: 'center',
-      alignItems: 'center',
-    }}>
-      {/* Explicitly sized & centered portrait box */}
-      <View style={{ width: videoW, height: videoH }}>
-        <Video
-          source={require('./assets/1000035985.mp4')}
-          style={{ width: '100%', height: '100%' }}
-          resizeMode={ResizeMode.COVER}  // fills the exact 9:16 box perfectly
-          shouldPlay
-          isLooping
-          isMuted={false}               // ← unmuted only in fullscreen
-          useNativeControls={true}
-        />
-      </View>
-
-      {/* Close button */}
-      <TouchableOpacity
-        onPress={onClose}
-        style={{
-          position: 'absolute',
-          top: Platform.OS === 'ios' ? 54 : (RNStatusBar.currentHeight ?? 24) + 12,
-          right: 20,
-          backgroundColor: 'rgba(0,0,0,0.70)',
-          borderRadius: 22, padding: 10,
-          borderWidth: 1, borderColor: 'rgba(255,255,255,0.22)',
-        }}
-      >
-        <Ionicons name="close" size={24} color="#fff" />
-      </TouchableOpacity>
-    </View>
-  );
-};
-
 // ─── PROJECTS PAGE ────────────────────────────────────────────────────────────
 type ProjectFilter = 'all' | 'website' | 'app' | 'hardware';
 
@@ -1071,13 +1177,13 @@ const ProjectsPage = ({ r, scrollRef }: { r: R; scrollRef: React.RefObject<Scrol
   const [filter, setFilter] = useState<ProjectFilter>('all');
   const websiteCount = PROJECTS.filter(p => p.type === 'website').length;
   const appCount     = PROJECTS.filter(p => p.type === 'app').length;
-  const filtered = filter === 'all' ? PROJECTS : PROJECTS.filter(p => p.type === filter);
+  const filtered     = filter === 'all' ? PROJECTS : PROJECTS.filter(p => p.type === filter);
 
   const FILTER_TABS: { key: ProjectFilter; label: string; count: number }[] = [
     { key: 'all',      label: 'All',      count: PROJECTS.length + 1 },
-    { key: 'website',  label: 'Websites', count: websiteCount    },
-    { key: 'app',      label: 'Apps',     count: appCount        },
-    { key: 'hardware', label: 'Hardware', count: 1               },
+    { key: 'website',  label: 'Websites', count: websiteCount         },
+    { key: 'app',      label: 'Apps',     count: appCount             },
+    { key: 'hardware', label: 'Hardware', count: 1                    },
   ];
 
   return (
@@ -1120,7 +1226,7 @@ const ProjectsPage = ({ r, scrollRef }: { r: R; scrollRef: React.RefObject<Scrol
           padding: 4, marginBottom: 20, gap: 4,
         }}>
           {FILTER_TABS.map((tab) => {
-            const isActive = filter === tab.key;
+            const isActive   = filter === tab.key;
             const isHardware = tab.key === 'hardware';
             return (
               <TouchableOpacity
@@ -1130,9 +1236,7 @@ const ProjectsPage = ({ r, scrollRef }: { r: R; scrollRef: React.RefObject<Scrol
                 style={{
                   flex: 1, paddingVertical: r.isSmall ? 8 : 10, borderRadius: 9,
                   alignItems: 'center',
-                  backgroundColor: isActive
-                    ? (isHardware ? C.termGreen : C.accent)
-                    : 'transparent',
+                  backgroundColor: isActive ? (isHardware ? C.termGreen : C.accent) : 'transparent',
                 }}
               >
                 <Text style={{
@@ -1163,10 +1267,9 @@ const ProjectsPage = ({ r, scrollRef }: { r: R; scrollRef: React.RefObject<Scrol
           </View>
         )}
 
-{filter !== 'hardware' && filtered.map((p) => <ProjectCard key={p.name} project={p} r={r} />)}
-{(filter === 'hardware' || filter === 'all') && <HardwareTab r={r} />}
-{filter !== 'hardware' && <GitHubComingSoon r={r} />}
-
+        {filter !== 'hardware' && filtered.map((p) => <ProjectCard key={p.name} project={p} r={r} />)}
+        {(filter === 'hardware' || filter === 'all') && <HardwareTab r={r} />}
+        {filter !== 'hardware' && <GitHubComingSoon r={r} />}
       </View>
 
       <View style={{ paddingHorizontal: r.px, paddingVertical: 20, alignItems: 'center', borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: C.border }}>
@@ -1178,7 +1281,7 @@ const ProjectsPage = ({ r, scrollRef }: { r: R; scrollRef: React.RefObject<Scrol
   );
 };
 
-// ─── CONTACT SECTION ─────────────────────────────────────────────────────────
+// ─── CONTACT ROW ─────────────────────────────────────────────────────────────
 type ContactRowProps = {
   iconName: React.ComponentProps<typeof Ionicons>['name'];
   iconColor: string;
@@ -1218,7 +1321,7 @@ const ContactRow = ({ iconName, iconColor, iconBg, iconBorder, title, subtitle, 
   </TouchableOpacity>
 );
 
-// ─── MAIN APP ────────────────────────────────────────────────────────────────
+// ─── MAIN APP ─────────────────────────────────────────────────────────────────
 type Tab = 'home' | 'projects' | 'contact';
 
 const STATUS_BAR_H    = Platform.OS === 'android' ? (RNStatusBar.currentHeight ?? 24) : 0;
@@ -1357,9 +1460,15 @@ export default function App() {
             </Text>
 
             <Text style={{ fontSize: 10, color: C.hint, fontWeight: '600', letterSpacing: 1.2, textTransform: 'uppercase', marginBottom: 10 }}>
+              Résumé
+            </Text>
+            <ResumeDownloadButton r={r} />
+
+            <View style={{ height: 16 }} />
+
+            <Text style={{ fontSize: 10, color: C.hint, fontWeight: '600', letterSpacing: 1.2, textTransform: 'uppercase', marginBottom: 10 }}>
               Contact
             </Text>
-
             <ContactRow
               iconName="call-outline"
               iconColor="#34d399"
@@ -1384,7 +1493,6 @@ export default function App() {
             <Text style={{ fontSize: 10, color: C.hint, fontWeight: '600', letterSpacing: 1.2, textTransform: 'uppercase', marginTop: 10, marginBottom: 10 }}>
               Socials
             </Text>
-
             <ContactRow
               iconName="logo-facebook"
               iconColor="#6b8cdb"
