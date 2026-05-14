@@ -166,35 +166,65 @@ const C = {
 };
 
 // ─── CV HELPERS ───────────────────────────────────────────────────────────────
-// The PDF lives in /public/JhonReyLazarra_CV.pdf
-// Vercel serves everything in /public at the root URL automatically.
-// On web  → trigger a browser download via an <a> tag
-// On native → download the file from the deployed URL then share it
+// Place your PDF at:  /public/JhonReyLazarra_CV.pdf
+// Make sure the file is committed to git and NOT in .gitignore
 
-const CV_FILENAME   = 'JhonReyLazarra_CV.pdf';
+const CV_FILENAME    = 'JhonReyLazarra_CV.pdf';
+const CV_PUBLIC_URL  = '/JhonReyLazarra_CV.pdf';  // served from /public on Vercel
 
-// ⚠️  Change this to your real Vercel domain once deployed.
-//     During local dev with `npx expo start --web` this will be a relative path
-//     which also works fine in the browser.
-const CV_PUBLIC_URL = '/JhonReyLazarra_CV.pdf';
-
-// Full absolute URL used by the native share flow.
-// Replace with your real Vercel domain.
-const CV_ABSOLUTE_URL = 'https://portfolio-jryl-5cvzkkhln-iamstorage888s-projects.vercel.app/JhonReyLazarra_CV.pdf';
+// Used by the native (iOS/Android) share flow only.
+const CV_ABSOLUTE_URL = 'https://portfolio-jryl.vercel.app/JhonReyLazarra_CV.pdf';
 
 async function shareResume(): Promise<void> {
-  // ── WEB: plain browser download, no CORS issues at all ───────────────────
+  // ── WEB ──────────────────────────────────────────────────────────────────
   if (Platform.OS === 'web') {
-    const link = document.createElement('a');
-    link.href     = CV_PUBLIC_URL;   // served directly from /public — always works
-    link.download = CV_FILENAME;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    // 1. Verify the file is actually reachable before trying to download
+    let fileExists = false;
+    try {
+      const check = await fetch(CV_PUBLIC_URL, { method: 'HEAD' });
+      fileExists = check.ok;
+    } catch (_) {
+      fileExists = false;
+    }
+
+    if (!fileExists) {
+      // File not found — open a new tab as best-effort fallback so the user
+      // isn't left with a silent failure.  The tab will show a 404 which at
+      // least makes the problem obvious.
+      throw new Error(
+        'CV file not found on the server.\n\n' +
+        'Make sure "JhonReyLazarra_CV.pdf" is inside the /public folder ' +
+        'and committed to your Git repository before deploying to Vercel.'
+      );
+    }
+
+    // 2. Fetch the file as a blob so the browser treats it as a download
+    //    rather than navigating to it (avoids the "open in new tab" behaviour
+    //    that some browsers apply to PDFs when using a plain <a> tag).
+    try {
+      const response = await fetch(CV_PUBLIC_URL);
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const blob = await response.blob();
+      const blobUrl = URL.createObjectURL(blob);
+
+      const link = document.createElement('a');
+      link.href     = blobUrl;
+      link.download = CV_FILENAME;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      // Clean up the object URL after a short delay
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 10_000);
+    } catch (_) {
+      // If blob download fails for any reason, fall back to opening the PDF
+      // directly in a new tab so the user can still save it manually.
+      window.open(CV_PUBLIC_URL, '_blank', 'noopener,noreferrer');
+    }
     return;
   }
 
-  // ── NATIVE: download from your Vercel URL then open share sheet ──────────
+  // ── NATIVE (iOS / Android) ────────────────────────────────────────────────
   const canShare = await Sharing.isAvailableAsync();
   if (!canShare) {
     Alert.alert('Not supported', 'Sharing is not available on this device.');
@@ -210,7 +240,6 @@ async function shareResume(): Promise<void> {
   } catch (_) {}
 
   const response = await fetch(CV_ABSOLUTE_URL);
-
   if (!response.ok) {
     throw new Error(`Download failed (HTTP ${response.status}).`);
   }
