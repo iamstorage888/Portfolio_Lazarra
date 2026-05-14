@@ -176,20 +176,21 @@ async function shareResume(): Promise<void> {
     return;
   }
 
-  const dest = `${FileSystem.cacheDirectory}${CV_FILENAME}`;
+  const dest = `${FileSystem.documentDirectory}${CV_FILENAME}`;
   const info = await FileSystem.getInfoAsync(dest);
 
   if (!info.exists) {
-    const [asset] = await Asset.loadAsync(require('./assets/cv-base64.txt'));
+    const asset = Asset.fromModule(require('./assets/cv-base64.txt'));
+    await asset.downloadAsync();
     const localUri = asset.localUri ?? asset.uri;
     if (!localUri) {
-      throw new Error('Could not load cv-base64.txt asset. Make sure the file exists in ./assets/.');
+      throw new Error('Could not load cv-base64.txt asset.');
     }
     const b64 = (await FileSystem.readAsStringAsync(localUri, {
-      encoding: FileSystem.EncodingType.UTF8,
+      encoding: 'utf8',
     })).trim();
     await FileSystem.writeAsStringAsync(dest, b64, {
-      encoding: FileSystem.EncodingType.Base64,
+      encoding: 'base64',
     });
   }
 
