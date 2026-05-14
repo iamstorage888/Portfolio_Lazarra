@@ -166,12 +166,35 @@ const C = {
 };
 
 // ─── CV HELPERS ───────────────────────────────────────────────────────────────
-const CV_FILENAME = 'Jhon_Rey_Lazarra_CV.docx';
+// The PDF lives in /public/JhonReyLazarra_CV.pdf
+// Vercel serves everything in /public at the root URL automatically.
+// On web  → trigger a browser download via an <a> tag
+// On native → download the file from the deployed URL then share it
 
-const CV_EXPORT_URL =
-  'https://docs.google.com/document/d/13Pc3BCDx4m6VPeurZCHkDkna77Bt_dFI/export?format=docx';
+const CV_FILENAME   = 'JhonReyLazarra_CV.pdf';
+
+// ⚠️  Change this to your real Vercel domain once deployed.
+//     During local dev with `npx expo start --web` this will be a relative path
+//     which also works fine in the browser.
+const CV_PUBLIC_URL = '/JhonReyLazarra_CV.pdf';
+
+// Full absolute URL used by the native share flow.
+// Replace with your real Vercel domain.
+const CV_ABSOLUTE_URL = 'https://YOUR-APP.vercel.app/JhonReyLazarra_CV.pdf';
 
 async function shareResume(): Promise<void> {
+  // ── WEB: plain browser download, no CORS issues at all ───────────────────
+  if (Platform.OS === 'web') {
+    const link = document.createElement('a');
+    link.href     = CV_PUBLIC_URL;   // served directly from /public — always works
+    link.download = CV_FILENAME;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    return;
+  }
+
+  // ── NATIVE: download from your Vercel URL then open share sheet ──────────
   const canShare = await Sharing.isAvailableAsync();
   if (!canShare) {
     Alert.alert('Not supported', 'Sharing is not available on this device.');
@@ -186,54 +209,35 @@ async function shareResume(): Promise<void> {
     if (info.exists) await FileSystem.deleteAsync(dest, { idempotent: true });
   } catch (_) {}
 
-  // Use fetch() instead of FileSystem.downloadAsync so we can fully follow
-  // Google's redirect chain (including the virus-scan confirmation page)
-  // and get the raw binary ourselves.
-  const response = await fetch(CV_EXPORT_URL, {
-    method: 'GET',
-    headers: {
-      'User-Agent':
-        'Mozilla/5.0 (Linux; Android 10) AppleWebKit/537.36 Chrome/120 Mobile Safari/537.36',
-    },
-    // React Native's fetch follows redirects automatically
-  });
+  const response = await fetch(CV_ABSOLUTE_URL);
 
   if (!response.ok) {
-    throw new Error(
-      `Download failed (HTTP ${response.status}). Make sure the Google Doc is shared as "Anyone with the link can view".`
-    );
+    throw new Error(`Download failed (HTTP ${response.status}).`);
   }
 
-  // Read the response as a base64 string via blob → FileReader
   const blob = await response.blob();
   const base64: string = await new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload  = () => {
       const result = reader.result as string;
-      // result is "data:...;base64,XXXXX" — strip the prefix
       resolve(result.split(',')[1] ?? result);
     };
     reader.onerror = () => reject(new Error('Failed to read downloaded file.'));
     reader.readAsDataURL(blob);
   });
 
-  // Sanity-check size — a real .docx is at least 5 KB; an HTML error page is tiny
-  if (base64.length < 6000) {
-    throw new Error(
-      'The downloaded file looks like an error page, not a real CV. Double-check that the Google Doc is shared as "Anyone with the link can view" and try again.'
-    );
+  if (base64.length < 1000) {
+    throw new Error('Downloaded file seems empty. Make sure the Vercel deployment is live.');
   }
 
-  // Write the binary to the cache directory
   await FileSystem.writeAsStringAsync(dest, base64, {
     encoding: FileSystem.EncodingType.Base64,
   });
 
-  // Open the share/save sheet
   await Sharing.shareAsync(dest, {
-    mimeType:    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    mimeType:    'application/pdf',
     dialogTitle: 'Save or Share CV — Jhon Rey Lazarra',
-    UTI:         'com.microsoft.word.docx',
+    UTI:         'com.adobe.pdf',
   });
 }
 
@@ -485,7 +489,7 @@ const ResumeDownloadButton = ({ r }: { r: R }) => {
     } catch (err: any) {
       Alert.alert(
         'Download Failed',
-        err?.message ?? 'Could not download CV. Make sure the Google Doc is shared as "Anyone with the link can view" and you have an internet connection.'
+        err?.message ?? 'Could not download CV. Please try again.'
       );
     } finally {
       setLoading(false);
@@ -529,7 +533,7 @@ const ResumeDownloadButton = ({ r }: { r: R }) => {
             {loading ? 'Downloading CV…' : 'Download My CV / Résumé'}
           </Text>
           <Text style={{ fontSize: r.isSmall ? 10 : 11, color: C.hint }}>
-            {loading ? 'Fetching from Google Drive…' : CV_FILENAME}
+            {loading ? 'Preparing your file…' : CV_FILENAME}
           </Text>
         </View>
         <Ionicons name={loading ? 'ellipsis-horizontal' : 'download-outline'} size={18} color={C.accent} />
