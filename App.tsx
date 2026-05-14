@@ -167,16 +167,55 @@ const C = {
 };
 
 // ─── CV HELPERS ───────────────────────────────────────────────────────────────
-const CV_FILENAME = 'Jhon_Rey_Lazarra_CV.docx';
+// ┌─────────────────────────────────────────────────────────────────────────┐
+// │  HOW TO SET UP YOUR CV FILE:                                            │
+// │                                                                         │
+// │  WEB (localhost / Vercel):                                              │
+// │    Place  Jhon_Rey_Lazarra_CV.docx  inside your  /public  folder.      │
+// │    Expo web serves /public automatically, so it will be available at   │
+// │    http://localhost:8081/Jhon_Rey_Lazarra_CV.docx (or your domain).    │
+// │                                                                         │
+// │  NATIVE (Android / iOS):                                                │
+// │    Keep  assets/cv-base64.txt  (base-64 encoded .docx) as before.      │
+// └─────────────────────────────────────────────────────────────────────────┘
+const CV_FILENAME   = 'Jhon_Rey_Lazarra_CV.docx';
+const CV_PUBLIC_URL = '/Jhon_Rey_Lazarra_CV.docx'; // served from /public on web
 
 async function shareResume(): Promise<void> {
+  // ── WEB: localhost or Vercel ──────────────────────────────────────────────
+  if (Platform.OS === 'web') {
+    try {
+      // Try to fetch first so we can give a clear error if the file is missing
+      const res = await fetch(CV_PUBLIC_URL, { method: 'HEAD' });
+      if (!res.ok) {
+        throw new Error(
+          `CV file not found at ${CV_PUBLIC_URL}.\n` +
+          `Make sure Jhon_Rey_Lazarra_CV.docx is inside the /public folder.`
+        );
+      }
+    } catch (err: any) {
+      // HEAD request failed — still attempt the download (might be a CORS/HEAD block)
+      console.warn('HEAD check failed, attempting download anyway:', err?.message);
+    }
+
+    const link = document.createElement('a');
+    link.href     = CV_PUBLIC_URL;
+    link.download = CV_FILENAME;
+    link.target   = '_blank'; // fallback for browsers that block programmatic downloads
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    return;
+  }
+
+  // ── NATIVE: Android / iOS ─────────────────────────────────────────────────
   const canShare = await Sharing.isAvailableAsync();
   if (!canShare) {
     Alert.alert('Not supported', 'Sharing is not available on this device.');
     return;
   }
 
-  const dest = `${FileSystem.documentDirectory}${CV_FILENAME}`;
+  const dest = `${FileSystem.cacheDirectory}${CV_FILENAME}`;
   const info = await FileSystem.getInfoAsync(dest);
 
   if (!info.exists) {
@@ -184,13 +223,18 @@ async function shareResume(): Promise<void> {
     await asset.downloadAsync();
     const localUri = asset.localUri ?? asset.uri;
     if (!localUri) {
-      throw new Error('Could not load cv-base64.txt asset.');
+      throw new Error(
+        'Could not load cv-base64.txt asset. ' +
+        'Make sure the file exists in ./assets/ and metro.config.js registers the txt extension.'
+      );
     }
-    const b64 = (await FileSystem.readAsStringAsync(localUri, {
-      encoding: 'utf8',
-    })).trim();
+    const b64 = (
+      await FileSystem.readAsStringAsync(localUri, {
+        encoding: FileSystem.EncodingType.UTF8,
+      })
+    ).trim();
     await FileSystem.writeAsStringAsync(dest, b64, {
-      encoding: 'base64',
+      encoding: FileSystem.EncodingType.Base64,
     });
   }
 
@@ -386,7 +430,7 @@ const SectionHeader = ({ title, r }: { title: string; r: R }) => (
   </View>
 );
 
-// ─── MINI CV BUTTON (must be before CoverHero) ───────────────────────────────
+// ─── MINI CV BUTTON ───────────────────────────────────────────────────────────
 const MiniCvButton = ({ r }: { r: R }) => {
   const [loading, setLoading] = useState(false);
 
@@ -396,7 +440,12 @@ const MiniCvButton = ({ r }: { r: R }) => {
     try {
       await shareResume();
     } catch (err: any) {
-      Alert.alert('Error', err?.message ?? 'Failed to share CV.');
+      if (Platform.OS === 'web') {
+        // On web, show a browser alert
+        window.alert('Error: ' + (err?.message ?? 'Failed to download CV. Make sure Jhon_Rey_Lazarra_CV.docx is in the /public folder.'));
+      } else {
+        Alert.alert('Error', err?.message ?? 'Failed to share CV.');
+      }
     } finally {
       setLoading(false);
     }
@@ -427,7 +476,7 @@ const MiniCvButton = ({ r }: { r: R }) => {
   );
 };
 
-// ─── RESUME DOWNLOAD BUTTON (must be before contact section render) ───────────
+// ─── RESUME DOWNLOAD BUTTON ───────────────────────────────────────────────────
 const ResumeDownloadButton = ({ r }: { r: R }) => {
   const [loading, setLoading] = useState(false);
   const pulseAnim = useRef(new Animated.Value(1)).current;
@@ -447,7 +496,11 @@ const ResumeDownloadButton = ({ r }: { r: R }) => {
     try {
       await shareResume();
     } catch (err: any) {
-      Alert.alert('Error', err?.message ?? 'Failed to share CV. Make sure cv-base64.txt exists in ./assets/.');
+      if (Platform.OS === 'web') {
+        window.alert('Error: ' + (err?.message ?? 'Failed to download CV. Make sure Jhon_Rey_Lazarra_CV.docx is in the /public folder.'));
+      } else {
+        Alert.alert('Error', err?.message ?? 'Failed to share CV. Make sure cv-base64.txt exists in ./assets/ and metro.config.js registers the txt extension.');
+      }
     } finally {
       setLoading(false);
     }
@@ -683,7 +736,6 @@ const BioTypingText = ({ r }: { r: R }) => {
 };
 
 // ─── COVER HERO ───────────────────────────────────────────────────────────────
-// NOTE: MiniCvButton must be defined above this component.
 const CoverHero = ({ r }: { r: R }) => {
   const COVER_H       = r.isSmall ? 160 : 195;
   const AVATAR_SIZE   = r.isSmall ? 95  : 112;
@@ -957,11 +1009,10 @@ const GitHubComingSoon = ({ r }: { r: R }) => (
   </View>
 );
 
-// ─── FULLSCREEN VIDEO PLAYER (must be before HardwareTab) ────────────────────
+// ─── FULLSCREEN VIDEO PLAYER ──────────────────────────────────────────────────
 const FullscreenVideoPlayer = ({ onClose }: { onClose: () => void }) => {
   const { width, height } = useWindowDimensions();
 
-  // Portrait video is 9:16. Fit it inside the screen without cropping.
   const videoAspect  = 9 / 16;
   const screenAspect = width / height;
 
@@ -969,11 +1020,9 @@ const FullscreenVideoPlayer = ({ onClose }: { onClose: () => void }) => {
   let videoH: number;
 
   if (screenAspect < videoAspect) {
-    // Screen is narrower than video aspect → constrain by width
     videoW = width;
     videoH = width / videoAspect;
   } else {
-    // Screen is wider → constrain by height
     videoH = height;
     videoW = height * videoAspect;
   }
@@ -1009,7 +1058,7 @@ const FullscreenVideoPlayer = ({ onClose }: { onClose: () => void }) => {
   );
 };
 
-// ─── HARDWARE TAB (FullscreenVideoPlayer must be defined above) ───────────────
+// ─── HARDWARE TAB ─────────────────────────────────────────────────────────────
 const HardwareTab = ({ r }: { r: R }) => {
   const [isFullscreen, setIsFullscreen] = useState(false);
 
