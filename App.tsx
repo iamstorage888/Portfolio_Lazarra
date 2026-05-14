@@ -180,7 +180,7 @@ const CV_PUBLIC_URL = '/JhonReyLazarra_CV.pdf';
 
 // Full absolute URL used by the native share flow.
 // Replace with your real Vercel domain.
-const CV_ABSOLUTE_URL = 'https://YOUR-APP.vercel.app/JhonReyLazarra_CV.pdf';
+const CV_ABSOLUTE_URL = 'https://portfolio-jryl-5cvzkkhln-iamstorage888s-projects.vercel.app/JhonReyLazarra_CV.pdf';
 
 async function shareResume(): Promise<void> {
   // ── WEB: plain browser download, no CORS issues at all ───────────────────
