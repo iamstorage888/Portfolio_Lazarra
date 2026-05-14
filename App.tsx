@@ -168,21 +168,8 @@ const C = {
 // ─── CV HELPERS ───────────────────────────────────────────────────────────────
 const CV_FILENAME = 'Jhon_Rey_Lazarra_CV.docx';
 
-// Extracts the file ID from a Google Drive/Docs share URL and builds
-// a direct-export URL so the file downloads as a .docx without any
-// login wall (the document must be set to "Anyone with the link can view").
-function buildGDriveExportUrl(shareUrl: string): string {
-  // Matches both /d/FILE_ID/ and ?id=FILE_ID patterns
-  const match =
-    shareUrl.match(/\/d\/([a-zA-Z0-9_-]+)/) ||
-    shareUrl.match(/[?&]id=([a-zA-Z0-9_-]+)/);
-  if (!match) throw new Error('Could not parse Google Drive file ID from URL.');
-  const fileId = match[1];
-  return `https://docs.google.com/document/d/${fileId}/export?format=docx`;
-}
-
-const GDRIVE_SHARE_URL =
-  'https://docs.google.com/document/d/13Pc3BCDx4m6VPeurZCHkDkna77Bt_dFI/edit?usp=drive_link&ouid=103452036341077160377&rtpof=true&sd=true';
+const CV_EXPORT_URL =
+  'https://docs.google.com/document/d/13Pc3BCDx4m6VPeurZCHkDkna77Bt_dFI/export?format=docx';
 
 async function shareResume(): Promise<void> {
   const canShare = await Sharing.isAvailableAsync();
@@ -193,23 +180,56 @@ async function shareResume(): Promise<void> {
 
   const dest = `${FileSystem.cacheDirectory}${CV_FILENAME}`;
 
-  // Always re-download so the user always gets the latest version.
-  // Remove a stale cached copy first if it exists.
-  const info = await FileSystem.getInfoAsync(dest);
-  if (info.exists) {
-    await FileSystem.deleteAsync(dest, { idempotent: true });
-  }
+  // Remove stale cache
+  try {
+    const info = await FileSystem.getInfoAsync(dest);
+    if (info.exists) await FileSystem.deleteAsync(dest, { idempotent: true });
+  } catch (_) {}
 
-  const exportUrl = buildGDriveExportUrl(GDRIVE_SHARE_URL);
+  // Use fetch() instead of FileSystem.downloadAsync so we can fully follow
+  // Google's redirect chain (including the virus-scan confirmation page)
+  // and get the raw binary ourselves.
+  const response = await fetch(CV_EXPORT_URL, {
+    method: 'GET',
+    headers: {
+      'User-Agent':
+        'Mozilla/5.0 (Linux; Android 10) AppleWebKit/537.36 Chrome/120 Mobile Safari/537.36',
+    },
+    // React Native's fetch follows redirects automatically
+  });
 
-  const result = await FileSystem.downloadAsync(exportUrl, dest);
-
-  if (result.status !== 200) {
+  if (!response.ok) {
     throw new Error(
-      `Download failed (HTTP ${result.status}). Make sure the Google Doc is shared as "Anyone with the link can view".`
+      `Download failed (HTTP ${response.status}). Make sure the Google Doc is shared as "Anyone with the link can view".`
     );
   }
 
+  // Read the response as a base64 string via blob → FileReader
+  const blob = await response.blob();
+  const base64: string = await new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload  = () => {
+      const result = reader.result as string;
+      // result is "data:...;base64,XXXXX" — strip the prefix
+      resolve(result.split(',')[1] ?? result);
+    };
+    reader.onerror = () => reject(new Error('Failed to read downloaded file.'));
+    reader.readAsDataURL(blob);
+  });
+
+  // Sanity-check size — a real .docx is at least 5 KB; an HTML error page is tiny
+  if (base64.length < 6000) {
+    throw new Error(
+      'The downloaded file looks like an error page, not a real CV. Double-check that the Google Doc is shared as "Anyone with the link can view" and try again.'
+    );
+  }
+
+  // Write the binary to the cache directory
+  await FileSystem.writeAsStringAsync(dest, base64, {
+    encoding: FileSystem.EncodingType.Base64,
+  });
+
+  // Open the share/save sheet
   await Sharing.shareAsync(dest, {
     mimeType:    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
     dialogTitle: 'Save or Share CV — Jhon Rey Lazarra',
