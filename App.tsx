@@ -19,7 +19,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { Video, ResizeMode } from 'expo-av';
 import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
-import { Asset } from 'expo-asset';
 
 // ─── RESPONSIVE HELPERS ───────────────────────────────────────────────────────
 function useResponsive() {
@@ -169,6 +168,22 @@ const C = {
 // ─── CV HELPERS ───────────────────────────────────────────────────────────────
 const CV_FILENAME = 'Jhon_Rey_Lazarra_CV.docx';
 
+// Extracts the file ID from a Google Drive/Docs share URL and builds
+// a direct-export URL so the file downloads as a .docx without any
+// login wall (the document must be set to "Anyone with the link can view").
+function buildGDriveExportUrl(shareUrl: string): string {
+  // Matches both /d/FILE_ID/ and ?id=FILE_ID patterns
+  const match =
+    shareUrl.match(/\/d\/([a-zA-Z0-9_-]+)/) ||
+    shareUrl.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+  if (!match) throw new Error('Could not parse Google Drive file ID from URL.');
+  const fileId = match[1];
+  return `https://docs.google.com/document/d/${fileId}/export?format=docx`;
+}
+
+const GDRIVE_SHARE_URL =
+  'https://docs.google.com/document/d/13Pc3BCDx4m6VPeurZCHkDkna77Bt_dFI/edit?usp=drive_link&ouid=103452036341077160377&rtpof=true&sd=true';
+
 async function shareResume(): Promise<void> {
   const canShare = await Sharing.isAvailableAsync();
   if (!canShare) {
@@ -177,20 +192,22 @@ async function shareResume(): Promise<void> {
   }
 
   const dest = `${FileSystem.cacheDirectory}${CV_FILENAME}`;
-  const info = await FileSystem.getInfoAsync(dest);
 
-  if (!info.exists) {
-    const [asset] = await Asset.loadAsync(require('./assets/cv-base64.txt'));
-    const localUri = asset.localUri ?? asset.uri;
-    if (!localUri) {
-      throw new Error('Could not load cv-base64.txt asset. Make sure the file exists in ./assets/.');
-    }
-    const b64 = (await FileSystem.readAsStringAsync(localUri, {
-      encoding: FileSystem.EncodingType.UTF8,
-    })).trim();
-    await FileSystem.writeAsStringAsync(dest, b64, {
-      encoding: FileSystem.EncodingType.Base64,
-    });
+  // Always re-download so the user always gets the latest version.
+  // Remove a stale cached copy first if it exists.
+  const info = await FileSystem.getInfoAsync(dest);
+  if (info.exists) {
+    await FileSystem.deleteAsync(dest, { idempotent: true });
+  }
+
+  const exportUrl = buildGDriveExportUrl(GDRIVE_SHARE_URL);
+
+  const result = await FileSystem.downloadAsync(exportUrl, dest);
+
+  if (result.status !== 200) {
+    throw new Error(
+      `Download failed (HTTP ${result.status}). Make sure the Google Doc is shared as "Anyone with the link can view".`
+    );
   }
 
   await Sharing.shareAsync(dest, {
@@ -385,7 +402,7 @@ const SectionHeader = ({ title, r }: { title: string; r: R }) => (
   </View>
 );
 
-// ─── MINI CV BUTTON (must be before CoverHero) ───────────────────────────────
+// ─── MINI CV BUTTON ───────────────────────────────────────────────────────────
 const MiniCvButton = ({ r }: { r: R }) => {
   const [loading, setLoading] = useState(false);
 
@@ -395,7 +412,7 @@ const MiniCvButton = ({ r }: { r: R }) => {
     try {
       await shareResume();
     } catch (err: any) {
-      Alert.alert('Error', err?.message ?? 'Failed to share CV.');
+      Alert.alert('Error', err?.message ?? 'Failed to download CV. Check your internet connection.');
     } finally {
       setLoading(false);
     }
@@ -420,13 +437,13 @@ const MiniCvButton = ({ r }: { r: R }) => {
         color={C.termGreen}
       />
       <Text style={{ fontSize: r.isSmall ? 9 : 11, fontWeight: '500', color: C.termGreen, letterSpacing: 0.4 }}>
-        {loading ? '…' : 'Get CV'}
+        {loading ? 'Downloading…' : 'Get CV'}
       </Text>
     </TouchableOpacity>
   );
 };
 
-// ─── RESUME DOWNLOAD BUTTON (must be before contact section render) ───────────
+// ─── RESUME DOWNLOAD BUTTON ───────────────────────────────────────────────────
 const ResumeDownloadButton = ({ r }: { r: R }) => {
   const [loading, setLoading] = useState(false);
   const pulseAnim = useRef(new Animated.Value(1)).current;
@@ -446,7 +463,10 @@ const ResumeDownloadButton = ({ r }: { r: R }) => {
     try {
       await shareResume();
     } catch (err: any) {
-      Alert.alert('Error', err?.message ?? 'Failed to share CV. Make sure cv-base64.txt exists in ./assets/.');
+      Alert.alert(
+        'Download Failed',
+        err?.message ?? 'Could not download CV. Make sure the Google Doc is shared as "Anyone with the link can view" and you have an internet connection.'
+      );
     } finally {
       setLoading(false);
     }
@@ -486,10 +506,10 @@ const ResumeDownloadButton = ({ r }: { r: R }) => {
         </Animated.View>
         <View style={{ flex: 1 }}>
           <Text style={{ fontSize: r.isSmall ? 13 : 14, fontWeight: '600', color: C.text, marginBottom: 2 }}>
-            {loading ? 'Preparing CV…' : 'Download My CV / Résumé'}
+            {loading ? 'Downloading CV…' : 'Download My CV / Résumé'}
           </Text>
           <Text style={{ fontSize: r.isSmall ? 10 : 11, color: C.hint }}>
-            {CV_FILENAME}
+            {loading ? 'Fetching from Google Drive…' : CV_FILENAME}
           </Text>
         </View>
         <Ionicons name={loading ? 'ellipsis-horizontal' : 'download-outline'} size={18} color={C.accent} />
@@ -682,7 +702,6 @@ const BioTypingText = ({ r }: { r: R }) => {
 };
 
 // ─── COVER HERO ───────────────────────────────────────────────────────────────
-// NOTE: MiniCvButton must be defined above this component.
 const CoverHero = ({ r }: { r: R }) => {
   const COVER_H       = r.isSmall ? 160 : 195;
   const AVATAR_SIZE   = r.isSmall ? 95  : 112;
@@ -956,11 +975,10 @@ const GitHubComingSoon = ({ r }: { r: R }) => (
   </View>
 );
 
-// ─── FULLSCREEN VIDEO PLAYER (must be before HardwareTab) ────────────────────
+// ─── FULLSCREEN VIDEO PLAYER ──────────────────────────────────────────────────
 const FullscreenVideoPlayer = ({ onClose }: { onClose: () => void }) => {
   const { width, height } = useWindowDimensions();
 
-  // Portrait video is 9:16. Fit it inside the screen without cropping.
   const videoAspect  = 9 / 16;
   const screenAspect = width / height;
 
@@ -968,11 +986,9 @@ const FullscreenVideoPlayer = ({ onClose }: { onClose: () => void }) => {
   let videoH: number;
 
   if (screenAspect < videoAspect) {
-    // Screen is narrower than video aspect → constrain by width
     videoW = width;
     videoH = width / videoAspect;
   } else {
-    // Screen is wider → constrain by height
     videoH = height;
     videoW = height * videoAspect;
   }
@@ -1008,7 +1024,7 @@ const FullscreenVideoPlayer = ({ onClose }: { onClose: () => void }) => {
   );
 };
 
-// ─── HARDWARE TAB (FullscreenVideoPlayer must be defined above) ───────────────
+// ─── HARDWARE TAB ─────────────────────────────────────────────────────────────
 const HardwareTab = ({ r }: { r: R }) => {
   const [isFullscreen, setIsFullscreen] = useState(false);
 
