@@ -66,6 +66,8 @@ const SKILLS = [
   { name: 'C++',          level: 'Programming',     color: '#a78bfa', bg: 'rgba(167,139,250,0.12)', icon: 'https://cdn.jsdelivr.net/gh/devicons/devicon/icons/cplusplus/cplusplus-original.svg'    },
   { name: 'Arduino IDE',  level: 'Embedded Dev',    color: '#34d399', bg: 'rgba(52,211,153,0.12)',  icon: 'https://cdn.jsdelivr.net/gh/devicons/devicon/icons/arduino/arduino-original.svg'        },
   { name: 'ESP32',        level: 'IoT / Hardware',  color: '#f87171', bg: 'rgba(248,113,113,0.12)', icon: 'https://cdn.jsdelivr.net/gh/devicons/devicon/icons/embeddedc/embeddedc-original.svg'    },
+  { name: 'C#',           level: 'Programming',     color: '#a78bfa', bg: 'rgba(167,139,250,0.12)', icon: 'https://cdn.jsdelivr.net/gh/devicons/devicon/icons/csharp/csharp-original.svg'          },
+  { name: 'Supabase',     level: 'Backend / DB',    color: '#34d399', bg: 'rgba(52,211,153,0.12)',  icon: 'https://cdn.jsdelivr.net/gh/devicons/devicon/icons/supabase/supabase-original.svg'      },
 ];
 
 const EXPERIENCE = [
