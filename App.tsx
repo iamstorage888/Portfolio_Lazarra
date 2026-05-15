@@ -169,11 +169,9 @@ const C = {
 // Place your PDF at:  /public/JhonReyLazarra_CV.pdf
 // Make sure the file is committed to git and NOT in .gitignore
 
-const CV_FILENAME    = 'JhonReyLazarra_CV.pdf';
-const CV_PUBLIC_URL  = '/JhonReyLazarra_CV.pdf';  // served from /public on Vercel
-
-// Used by the native (iOS/Android) share flow only.
-const CV_ABSOLUTE_URL = 'https://portfolio-jryl.vercel.app/JhonReyLazarra_CV.pdf';
+const CV_FILENAME    = 'Jhon_Rey_Lazarra_CV.pdf';
+const CV_PUBLIC_URL  = '/Jhon_Rey_Lazarra_CV.pdf';
+const CV_ABSOLUTE_URL = 'https://portfolio-jryl.vercel.app/Jhon_Rey_Lazarra_CV.pdf';
 
 async function shareResume(): Promise<void> {
   // ── WEB ──────────────────────────────────────────────────────────────────
