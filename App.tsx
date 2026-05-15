@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { StatusBar as RNStatusBar, Platform } from 'react-native';
+import { StatusBar as RNStatusBar, Platform,TextInput } from 'react-native';
+import emailjs from '@emailjs/browser';
 import { StatusBar } from 'expo-status-bar';
 import {
   StyleSheet,
@@ -168,6 +169,10 @@ const C = {
 // ─── CV HELPERS ───────────────────────────────────────────────────────────────
 // Place your PDF at:  /public/JhonReyLazarra_CV.pdf
 // Make sure the file is committed to git and NOT in .gitignore
+
+const EMAILJS_SERVICE_ID  = 'service_pkk532u';   // from EmailJS dashboard
+const EMAILJS_TEMPLATE_ID = 'template_mxjb1s5';  // from EmailJS dashboard
+const EMAILJS_PUBLIC_KEY  = '_2kuMCEaJJQIfLOah';   // from EmailJS dashboard
 
 const CV_FILENAME    = 'Jhon_Rey_Lazarra_CV.pdf';
 const CV_PUBLIC_URL  = '/Jhon_Rey_Lazarra_CV.pdf';
@@ -1394,11 +1399,151 @@ type Tab = 'home' | 'projects' | 'contact';
 const STATUS_BAR_H    = Platform.OS === 'android' ? (RNStatusBar.currentHeight ?? 24) : 0;
 const NAV_PADDING_TOP = Platform.OS === 'ios' ? 54 : STATUS_BAR_H + 10;
 
+const ContactFormModal = ({ visible, onClose, r }: { visible: boolean; onClose: () => void; r: R }) => {
+  const [name,    setName]    = useState('');
+  const [email,   setEmail]   = useState('');
+  const [message, setMessage] = useState('');
+  const [sending, setSending] = useState(false);
+  const [sent,    setSent]    = useState(false);
+
+  const handleSend = async () => {
+    if (!name.trim() || !email.trim() || !message.trim()) {
+      Alert.alert('Missing fields', 'Please fill in all fields before sending.');
+      return;
+    }
+    setSending(true);
+    try {
+      await emailjs.send(
+        EMAILJS_SERVICE_ID,
+        EMAILJS_TEMPLATE_ID,
+        { from_name: name, from_email: email, message },
+        EMAILJS_PUBLIC_KEY
+      );
+      setSent(true);
+      setName(''); setEmail(''); setMessage('');
+      setTimeout(() => { setSent(false); onClose(); }, 2000);
+    } catch (err: any) {
+      Alert.alert('Failed to send', err?.text ?? 'Something went wrong. Try again.');
+    } finally {
+      setSending(false);
+    }
+  };
+
+  return (
+    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
+      <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.70)', justifyContent: 'flex-end' }}>
+        <View style={{
+          backgroundColor: C.grad2,
+          borderTopLeftRadius: 24, borderTopRightRadius: 24,
+          borderWidth: 1, borderColor: C.border,
+          padding: r.isSmall ? 20 : 24,
+          paddingBottom: Platform.OS === 'ios' ? 36 : 24,
+        }}>
+          {/* Header */}
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+            <Text style={{ fontFamily: 'serif', fontSize: r.isSmall ? 18 : 20, fontWeight: '600', color: C.text }}>
+              Send me a message
+            </Text>
+            <TouchableOpacity onPress={onClose} activeOpacity={0.7}>
+              <Ionicons name="close-circle-outline" size={26} color={C.hint} />
+            </TouchableOpacity>
+          </View>
+
+          {/* Name */}
+          <Text style={{ fontSize: 11, color: C.hint, fontWeight: '600', letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: 6 }}>Your Name</Text>
+          <View style={{
+            backgroundColor: C.surface, borderRadius: 10, borderWidth: 1, borderColor: C.border,
+            paddingHorizontal: 14, paddingVertical: 10, marginBottom: 14,
+          }}>
+            <TextInput
+              value={name}
+              onChangeText={setName}
+              placeholder="e.g. Juan dela Cruz"
+              placeholderTextColor={C.hint}
+              style={{ fontSize: r.isSmall ? 13 : 14, color: C.text }}
+            />
+          </View>
+
+          {/* Email */}
+          <Text style={{ fontSize: 11, color: C.hint, fontWeight: '600', letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: 6 }}>Your Email</Text>
+          <View style={{
+            backgroundColor: C.surface, borderRadius: 10, borderWidth: 1, borderColor: C.border,
+            paddingHorizontal: 14, paddingVertical: 10, marginBottom: 14,
+          }}>
+            <TextInput
+              value={email}
+              onChangeText={setEmail}
+              placeholder="you@example.com"
+              placeholderTextColor={C.hint}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              style={{ fontSize: r.isSmall ? 13 : 14, color: C.text }}
+            />
+          </View>
+
+          {/* Message */}
+          <Text style={{ fontSize: 11, color: C.hint, fontWeight: '600', letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: 6 }}>Message</Text>
+          <View style={{
+            backgroundColor: C.surface, borderRadius: 10, borderWidth: 1, borderColor: C.border,
+            paddingHorizontal: 14, paddingVertical: 10, marginBottom: 20,
+          }}>
+            <TextInput
+              value={message}
+              onChangeText={setMessage}
+              placeholder="What would you like to say?"
+              placeholderTextColor={C.hint}
+              multiline
+              numberOfLines={4}
+              style={{ fontSize: r.isSmall ? 13 : 14, color: C.text, minHeight: 90, textAlignVertical: 'top' }}
+            />
+          </View>
+
+          {/* Send Button */}
+          <TouchableOpacity
+            onPress={handleSend}
+            disabled={sending || sent}
+            activeOpacity={0.82}
+            style={{ borderRadius: 12, overflow: 'hidden' }}
+          >
+            <LinearGradient
+              colors={sent ? ['#34d399', '#059669'] : ['rgba(56,189,248,0.25)', 'rgba(56,189,248,0.12)']}
+              start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+              style={{
+                paddingVertical: r.isSmall ? 13 : 15,
+                alignItems: 'center', justifyContent: 'center',
+                flexDirection: 'row', gap: 8,
+                borderWidth: 1,
+                borderColor: sent ? 'rgba(52,211,153,0.5)' : C.accentBorder,
+                borderRadius: 12,
+              }}
+            >
+              <Ionicons
+                name={sent ? 'checkmark-circle-outline' : sending ? 'hourglass-outline' : 'send-outline'}
+                size={18}
+                color={sent ? '#fff' : C.accent}
+              />
+              <Text style={{
+                fontSize: r.isSmall ? 13 : 14, fontWeight: '700',
+                color: sent ? '#fff' : C.accent, letterSpacing: 0.4,
+              }}>
+                {sent ? 'Message Sent!' : sending ? 'Sending…' : 'Send Message'}
+              </Text>
+            </LinearGradient>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
+  );
+};
+
 export default function App() {
   const [activeTab, setActiveTab] = useState<Tab>('home');
   const r = useResponsive();
+  const [emailModalVisible, setEmailModalVisible] = useState(false);
 
-  const handleEmail = () => Linking.openURL('https://mail.google.com/mail/?view=cm&to=iamstorage24@gmail.com');
+
+// Replace the old handleEmail:
+  const handleEmail = () => setEmailModalVisible(true);
   const handlePhone = () => Linking.openURL('tel:09480681543');
 
   const homeRef           = useRef<ScrollView>(null);
@@ -1594,6 +1739,11 @@ export default function App() {
       {activeTab === 'projects' && (
         <ProjectsPage r={r} scrollRef={projectRef} />
       )}
+      <ContactFormModal                                  
+        visible={emailModalVisible}
+        onClose={() => setEmailModalVisible(false)}
+        r={r}
+      />
     </View>
   );
 }
