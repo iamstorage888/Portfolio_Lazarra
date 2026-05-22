@@ -388,6 +388,19 @@ function useGlitch() {
   return x;
 }
 
+function useProjectsNudge(switchTab: (tab: Tab) => void) {
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    const id = setTimeout(() => setVisible(true), 15000);
+    return () => clearTimeout(id);
+  }, []);
+
+  return { visible, dismiss: () => setVisible(false), go: () => { setVisible(false); switchTab('projects'); } };
+}
+
+
+
 // ─── PRIMITIVE ANIMATED COMPONENTS ───────────────────────────────────────────
 const AnimatedGradientBg = () => {
   const anim = useRef(new Animated.Value(0)).current;
@@ -1538,11 +1551,90 @@ const ContactFormModal = ({ visible, onClose, r }: { visible: boolean; onClose: 
   );
 };
 
+
+
+const ProjectsNudge = ({ onDismiss, onGo, r }: { onDismiss: () => void; onGo: () => void; r: R }) => {
+  const arrowY = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(arrowY, { toValue: -6, duration: 500, useNativeDriver: true }),
+        Animated.timing(arrowY, { toValue: 0,  duration: 500, useNativeDriver: true }),
+      ])
+    ).start();
+  }, []);
+
+  return (
+    <View style={{ position: 'absolute', top: NAV_PADDING_TOP + 63, right: r.px, zIndex: 999, alignItems: 'flex-end' }}>
+      {/* Arrow pointing up at the Projects tab */}
+      <Animated.View style={{ transform: [{ translateY: arrowY }], alignItems: 'center', marginRight: r.width / 2 - 38, marginBottom: -30 }}>
+        <Ionicons name="arrow-up" size={40} color={C.accent} />
+        <Text style={{ fontSize: 9, fontWeight: '700', color: C.accent, letterSpacing: 0.8 }}>TAP</Text>
+      </Animated.View>
+
+      {/* Popup card */}
+      <View style={{
+        backgroundColor: C.grad2,
+        borderRadius: 16,
+        borderWidth: 1,
+        borderColor: C.accentBorder,
+        padding: r.isSmall ? 14 : 18,
+        maxWidth: 260,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 12,
+        elevation: 8,
+      }}>
+        {/* Close button */}
+        <TouchableOpacity onPress={onDismiss} style={{ position: 'absolute', top: 10, right: 10 }} activeOpacity={0.7}>
+          <Ionicons name="close-circle-outline" size={20} color={C.hint} />
+        </TouchableOpacity>
+
+        {/* Badge */}
+        <View style={{
+          flexDirection: 'row', alignItems: 'center', gap: 5,
+          backgroundColor: C.accentDim, borderWidth: 1, borderColor: C.accentBorder,
+          alignSelf: 'flex-start', paddingHorizontal: 8, paddingVertical: 3,
+          borderRadius: 20, marginBottom: 8,
+        }}>
+          <Ionicons name="sparkles-outline" size={11} color={C.accent} />
+          <Text style={{ fontSize: 10, fontWeight: '600', color: C.accent }}>Check this out</Text>
+        </View>
+
+        <Text style={{ fontSize: r.isSmall ? 13 : 15, fontWeight: '600', color: C.text, marginBottom: 4 }}>
+          See my projects
+        </Text>
+        <Text style={{ fontSize: r.isSmall ? 11 : 12, color: C.muted, lineHeight: 18, marginBottom: 14 }}>
+          I've built websites, mobile apps, and an IoT hardware system. Take a look!
+        </Text>
+
+        <TouchableOpacity
+          onPress={onGo}
+          activeOpacity={0.85}
+          style={{
+            flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+            backgroundColor: C.accent, borderRadius: 10,
+            paddingVertical: r.isSmall ? 9 : 11,
+          }}
+        >
+          <Text style={{ fontSize: r.isSmall ? 12 : 13, fontWeight: '700', color: C.accentDark }}>
+            View projects
+          </Text>
+          <Ionicons name="arrow-forward" size={14} color={C.accentDark} />
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+};
+
+
+
 export default function App() {
   const [activeTab, setActiveTab] = useState<Tab>('home');
   const r = useResponsive();
   const [emailModalVisible, setEmailModalVisible] = useState(false);
-
 
 // Replace the old handleEmail:
   const handleEmail = () => setEmailModalVisible(true);
@@ -1551,6 +1643,7 @@ export default function App() {
   const homeRef           = useRef<ScrollView>(null);
   const projectRef        = useRef<ScrollView>(null);
   const contactSectionRef = useRef<View>(null);
+  
 
   const switchTab = (tab: Tab) => {
     if (tab === 'contact') {
@@ -1569,6 +1662,8 @@ export default function App() {
     }
   };
 
+
+  const nudge = useProjectsNudge(switchTab);
   const NAV_TABS: { key: Tab; label: string }[] = [
     { key: 'home',     label: 'Portfolio' },
     { key: 'projects', label: 'Projects'  },
@@ -1746,6 +1841,13 @@ export default function App() {
         onClose={() => setEmailModalVisible(false)}
         r={r}
       />
+      
+
+{activeTab === 'home' && nudge.visible && (
+  <ProjectsNudge onDismiss={nudge.dismiss} onGo={nudge.go} r={r} />
+)}
+
+
     </View>
   );
 }
